@@ -38,142 +38,162 @@ def exaact_area_under_kurve(lim_a, lim_b):
     return part2 - part1
 
 # --------------------------------------------------
-def aufgabe_1():
-    # consts
-    a = math.sqrt(2)
-    b = 5*math.e
-    N = 5
 
+class Aufgabe1:
+    def __init__(self, N=5):
+        self.a = math.sqrt(2)
+        self.b = 5 * math.e
+        self.N = N
 
-    # ---------------------------- a) ----------------------------
-    print("------------ a) ------------")
-    p0_0 = np.linspace(a, b, num=N)
-    p0_1 = np.array(range(N))
-    p0 = np.array(list(zip(p0_0, p0_1)))
-    print("p0:", p0)
+        # State Variables
+        self.p0 = None
+        self.p1 = None
+        self.p2 = None
+        self.newP2 = None
+        
+        self.t0 = None
+        self.t1 = None
+        self.t2 = None
+        self.newT2 = None
 
-    # ---------------------------- b) ----------------------------
-    print("------------ b) ------------")
-    p1_0 = np.random.uniform(a, b, size=N)
-    p1_1 = np.array(range(N))
-    np.random.shuffle(p1_1)
-    p1 = np.array(list(zip(p1_0, p1_1)))
-    print("p1:", p1)
-
-    # ---------------------------- c) ----------------------------
-    # p0_0 enthält sortierte x_k Werte,
-    # p1_1 enthält zufällige positionswerte von 0 bis N-1
-    print("------------ c) ------------")
-    p2 = np.array(list(zip(p0_0, p1_1)))
-    print("p2:", p2)
-
-    # ---------------------------- d) ----------------------------
-    print("------------ d) ------------")
-    print("--- p0 ---")
-    t0 = generate_t(p0)
-    #print("t0:", t0)
-
-    abstaende = get_teil_Abstand(p0, t0)
-    maxAbstand = np.max(abstaende)
-    minAbstand = np.min(abstaende)
-    meanAbstand = np.mean(abstaende)
-    print(f"Maximaler Abstand p0: {maxAbstand}")
-    print(f"Minimaler Abstand p0: {minAbstand}")
-    print(f"Mittlerer Abstand p0: {meanAbstand}")
-
-    print("--- p1 ---")
-    t1 = generate_t(p1)
-    #print("t1:", t1)
-    abstaende = get_teil_Abstand(p1, t1)
-    maxAbstand = np.max(abstaende)
-    minAbstand = np.min(abstaende)
-    meanAbstand = np.mean(abstaende)
-    print(f"Maximaler Abstand p1: {maxAbstand}")
-    print(f"Minimaler Abstand p1: {minAbstand}")
-    print(f"Mittlerer Abstand p1: {meanAbstand}")
-
-
-    print("--- p2 ---")
-    t2 = generate_t(p2) 
-    #print("t2:", t2)
-    abstaende = get_teil_Abstand(p2, t2)
-    maxAbstand = np.max(abstaende)
-    minAbstand = np.min(abstaende)
-    meanAbstand = np.mean(abstaende)
-    print(f"Maximaler Abstand p2: {maxAbstand}")
-    print(f"Minimaler Abstand p2: {minAbstand}")
-    print(f"Mittlerer Abstand p2: {meanAbstand}")
-
-    print("--- Erstellung mit N=10000 ---")
-    N = 100000
-    Np0_0 = np.random.uniform(a, b, size=N)
-    Np0_1 = np.array(range(N))
-    Np0 = np.array(list(zip(Np0_0, Np0_1)))
-    Nt0 = generate_t(Np0)
-    abstaende = get_teil_Abstand(Np0, t0)
-    maxAbstand = np.max(abstaende)
-    minAbstand = np.min(abstaende)
-    meanAbstand = np.mean(abstaende)
-    print(f"Maximaler Abstand p0: {maxAbstand}")
-    print(f"Minimaler Abstand p0: {minAbstand}")
-    print(f"Mittlerer Abstand p0: {meanAbstand}")
-    plt.hist(abstaende, bins=500)
-
-    # ---------------------------- e) ----------------------------
-    print("------------ e) ------------")
-    # p2 = np.array(p2)
-    cond_to_remove = (p2[:, 1] % 3 == 0) & (p2[:, 1] != 0)
-    newP2 = p2[~cond_to_remove]
-    print("new p2:", newP2)
-    newT2 = generate_t(newP2)
-    print("new t2:", newT2)
-
-    # ---------------------------- f) ----------------------------
-    print("------------ f) ------------")
-    def func(x):
+    def func(self, x):
         # f(x) = ln(x^2)
         return 2 * np.log(x)
 
-    # p0 = np.array(p0)
-    # p1 = np.array(p1)
-    # p2 = np.array(p2)
-    y_p0 = func(p0[:,0])
-    y_p1 = func(p1[:,0])
-    y_newP2 = func(newP2[:,0])
-    print(y_p0)
-    print(y_p1)
-    print(y_newP2)
+    def aufgabe_a(self):
+        print("------------ a) ------------")
+        p0_0 = np.linspace(self.a, self.b, num=self.N)
+        p0_1 = np.arange(self.N)
+        self.p0 = np.column_stack((p0_0, p0_1))
+        print("p0:\n", self.p0)
 
-    plt.figure(figsize=(10, 6))
-    plt.scatter(p0[:,0], y_p0, label='p0', marker='o', linewidths=0.3)
-    plt.scatter(p1[:,0], y_p1, label='p1', marker='o', linewidths=0.3)
-    plt.scatter(newP2[:,0], y_newP2, label='p2', marker='o', linewidths=0.3)
-    plt.title("Auswertung der Funktion an verschiedenen Knotenpunkten (scatter plot)")
-    plt.xlabel("x (P-Liste)")
-    plt.ylabel("f(x)")
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.autoscale()
+    def aufgabe_b(self):
+        print("------------ b) ------------")
+        p1_0 = np.random.uniform(self.a, self.b, size=self.N)
+        p1_1 = np.arange(self.N)
+        np.random.shuffle(p1_1)
+        self.p1 = np.column_stack((p1_0, p1_1))
+        print("p1:\n", self.p1)
 
-    # ---------------------------- g) ----------------------------
-    print("------------ g) ------------")
-    abstaende_p0 = get_teil_Abstand(p0, t0)
-    abstaende_p1 = get_teil_Abstand(p1, t1)
-    abstaende_p2 = get_teil_Abstand(newP2, newT2)
-    abstaende_p2_1000 = get_teil_Abstand(Np0, Nt0)
-    area_p0 = area_under_kurve(p0[:,0], y_p0, abstaende_p0)
-    area_p1 = area_under_kurve(p1[:,0], y_p1, abstaende_p1)
-    area_p2 = area_under_kurve(newP2[:,0], y_newP2, abstaende_p2)
-    area_p2_1000 = area_under_kurve(Np0[:,0], func(Np0[:,0]), abstaende_p2_1000)
-    print(f"Fläche unter der Kurve für p0 (N=05): {area_p0}")
-    print(f"Fläche unter der Kurve für p1 (N=05): {area_p1}")
-    print(f"Fläche unter der Kurve für p2 (N=05): {area_p2}")
-    print(f"Fläche unter der Kurve für p2 (N=1k): {area_p2_1000}")
-    exact_area = exaact_area_under_kurve(a, b)
-    print(f"Exakte Fläche unter der Kurve: {exact_area}")
+    def aufgabe_c(self):
+        print("------------ c) ------------")
+        # Ensure dependencies exist
+        if self.p0 is None: self.aufgabe_a()
+        if self.p1 is None: self.aufgabe_b()
 
-    plt.show()
+        # p0[:, 0] enthält sortierte x_k Werte, p1[:, 1] enthält zufällige Nummern
+        self.p2 = np.column_stack((self.p0[:, 0], self.p1[:, 1]))
+        print("p2:\n", self.p2)
 
+    def aufgabe_d(self):
+        print("------------ d) ------------")
+        if self.p2 is None: self.aufgabe_c()
+
+        # --- p0 ---
+        print("--- p0 ---")
+        self.t0 = generate_t(self.p0)
+        abstaende_p0 = get_teil_Abstand(self.p0, self.t0)
+        print(f"Maximaler Abstand p0: {np.max(abstaende_p0):.4f}")
+        print(f"Minimaler Abstand p0: {np.min(abstaende_p0):.4f}")
+        print(f"Mittlerer Abstand p0: {np.mean(abstaende_p0):.4f}")
+
+        # --- p1 ---
+        print("--- p1 ---")
+        self.t1 = generate_t(self.p1)
+        abstaende_p1 = get_teil_Abstand(self.p1, self.t1)
+        print(f"Maximaler Abstand p1: {np.max(abstaende_p1):.4f}")
+        print(f"Minimaler Abstand p1: {np.min(abstaende_p1):.4f}")
+        print(f"Mittlerer Abstand p1: {np.mean(abstaende_p1):.4f}")
+
+        # --- p2 ---
+        print("--- p2 ---")
+        self.t2 = generate_t(self.p2) 
+        abstaende_p2 = get_teil_Abstand(self.p2, self.t2)
+        print(f"Maximaler Abstand p2: {np.max(abstaende_p2):.4f}")
+        print(f"Minimaler Abstand p2: {np.min(abstaende_p2):.4f}")
+        print(f"Mittlerer Abstand p2: {np.mean(abstaende_p2):.4f}")
+
+        # --- Erstellung mit N=100000 ---
+        print("--- Erstellung mit N=100000 ---")
+        N_large = 100000
+        Np0_0 = np.random.uniform(self.a, self.b, size=N_large)
+        Np0_1 = np.arange(N_large)
+        Np0 = np.column_stack((Np0_0, Np0_1))
+        
+        Nt0 = generate_t(Np0)
+        abstaende_large = get_teil_Abstand(Np0, Nt0) # Bug fixed: Used Nt0 instead of t0
+        
+        print(f"Maximaler Abstand p0 (100k): {np.max(abstaende_large):.4f}")
+        print(f"Minimaler Abstand p0 (100k): {np.min(abstaende_large):.4f}")
+        print(f"Mittlerer Abstand p0 (100k): {np.mean(abstaende_large):.4f}")
+        
+        plt.figure(figsize=(10, 5))
+        plt.hist(abstaende_large, bins=500)
+        plt.title("Häufigkeitsverteilung der Abstände (N=100000)")
+        plt.xlabel("Abstand")
+        plt.ylabel("Häufigkeit")
+
+    def aufgabe_e(self):
+        print("------------ e) ------------")
+        if self.p2 is None: self.aufgabe_c()
+        
+        cond_to_remove = (self.p2[:, 1] % 3 == 0) & (self.p2[:, 1] != 0)
+        self.newP2 = self.p2[~cond_to_remove]
+        print("new p2:\n", self.newP2)
+        
+        self.newT2 = generate_t(self.newP2)
+        print("new t2:\n", self.newT2)
+
+    def aufgabe_f(self):
+        print("------------ f) ------------")
+        if self.newP2 is None: self.aufgabe_e()
+
+        self.y_p0 = self.func(self.p0[:, 0])
+        self.y_p1 = self.func(self.p1[:, 0])
+        self.y_newP2 = self.func(self.newP2[:, 0])
+
+        plt.figure(figsize=(10, 6))
+        plt.scatter(self.p0[:, 0], self.y_p0, label='p0', marker='o', linewidths=0.3)
+        plt.scatter(self.p1[:, 0], self.y_p1, label='p1', marker='o', linewidths=0.3)
+        plt.scatter(self.newP2[:, 0], self.y_newP2, label='new p2', marker='o', linewidths=0.3)
+        
+        plt.title("Auswertung der Funktion an verschiedenen Knotenpunkten")
+        plt.xlabel("x")
+        plt.ylabel("f(x) = ln(x^2)")
+        plt.legend()
+        plt.grid(True, linestyle=':', alpha=0.7)
+
+    def aufgabe_g(self):
+        print("------------ g) ------------")
+        if not hasattr(self, 'y_p0'): self.aufgabe_f()
+
+        abstaende_p0 = get_teil_Abstand(self.p0, self.t0)
+        abstaende_p1 = get_teil_Abstand(self.p1, self.t1)
+        abstaende_p2 = get_teil_Abstand(self.newP2, self.newT2)
+
+        area_p0 = area_under_kurve(self.p0[:, 0], self.y_p0, abstaende_p0)
+        area_p1 = area_under_kurve(self.p1[:, 0], self.y_p1, abstaende_p1)
+        area_p2 = area_under_kurve(self.newP2[:, 0], self.y_newP2, abstaende_p2)
+
+        print(f"Fläche unter der Kurve für p0 (N={self.N}): {area_p0:.4f}")
+        print(f"Fläche unter der Kurve für p1 (N={self.N}): {area_p1:.4f}")
+        print(f"Fläche unter der Kurve für p2 (N={self.N}): {area_p2:.4f}")
+
+        exact_area = exaact_area_under_kurve(self.a, self.b)
+        print(f"Exakte Fläche unter der Kurve: {exact_area:.4f}")
+
+        # Show all plots at the end
+        plt.show()
+
+
+    def all_aufgaben(self):
+        self.aufgabe_a()
+        self.aufgabe_b()
+        self.aufgabe_c()
+        self.aufgabe_d()
+        self.aufgabe_e()
+        self.aufgabe_f()
+        self.aufgabe_g()
 
 
 def aufgabe_2():
@@ -213,4 +233,7 @@ def aufgabe_2():
 
 
 
-aufgabe_2()
+if __name__ == "__main__":
+    # a1 = Aufgabe1()
+    # a1.all_aufgaben()
+    aufgabe_1()
