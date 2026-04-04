@@ -1,0 +1,15 @@
+Zeit für Dimension 500: 0.4441 Sekunden
+Zeit für Dimension 1500: 0.3929 Sekunden
+Zeit für Dimension 2500: 0.1539 Sekunden
+Zeit für Dimension 3500: 0.2842 Sekunden
+Zeit für Dimension 4500: 0.5604 Sekunden
+Zeit für Dimension 5500: 1.1020 Sekunden
+Zeit für Dimension 6500: 3.1003 Sekunden
+Zeit für Dimension 7500: 2.3908 Sekunden
+Zeit für Dimension 8500: 3.4832 Sekunden
+Zeit für Dimension 9500: 3.9330 Sekunden
+Zeit für Dimension 10500: 5.9514 Sekunden
+Zeit für Dimension 11500: 11.4931 Sekunden
+Zeit für Dimension 12500: 12.0862 Sekunden
+Zeit für Dimension 13500: 14.2564 Sekunden
+Zeit für Dimension 14500: 17.8663 Sekunden
