@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import time
 import scipy.sparse as sp
 import scipy.linalg as spla
-import json
 import os
 import pickle
 # --------------------------------------------------
@@ -14,7 +13,6 @@ TO_MB = 1024 * 1024
 # 1 d)
 def generate_t(pList: np.ndarray) -> np.ndarray:
     t = []
-    pList = np.array(pList)
     pList = pList[pList[:, 0].argsort()] # Sortiere pList nach den x-Werten
     plist_tmp = pList[:, 1][:-1]
     plist_1 = pList[:, 1][1:]
@@ -83,18 +81,17 @@ class Aufgabe1:
         print("p1:\n", self.p1)
 
     def aufgabe_c(self):
-        print("------------ c) ------------")
-        # Ensure dependencies exist
         if self.p0 is None: self.aufgabe_a()
         if self.p1 is None: self.aufgabe_b()
-
-        # p0[:, 0] enthält sortierte x_k Werte, p1[:, 1] enthält zufällige Nummern
+    
+        print("------------ c) ------------")
         self.p2 = np.column_stack((self.p0[:, 0], self.p1[:, 1]))
         print("p2:\n", self.p2)
 
     def aufgabe_d(self):
-        print("------------ d) ------------")
         if self.p2 is None: self.aufgabe_c()
+
+        print("------------ d) ------------")
 
         # --- p0 ---
         print("--- p0 ---")
@@ -502,13 +499,86 @@ class Aufgabe2:
         plt.show()
 
         
+class Aufgabe3:
+    def __init__(self):
+        pass
+    
+    def aufgabe_a(self):
+        print("------------ a) ------------")
+        l = 3
+        h = 4
+        x0, y0 = 0, 0
+        xN, yN = l, h
+        N0 = 7
+        N = N0**2
+        anzahl_dreiecke = 2 * (N0 - 1)**2
+        print(f"Anzahl Dreiecke: {anzahl_dreiecke}, Anzahl Punkte: {N}, N0: {N0}")
+
+        # Lege Punkte fest
+        px = np.linspace(x0, xN, N0)
+        py = np.linspace(y0, yN, N0)
+        points = np.array([[x, y] for y in py for x in px])
+        # print("Punkte:\n", points)
+
+        plt.plot(points[:,0], points[:,1], 'ko')
+        plt.title(f"T-Liste generieren mit {anzahl_dreiecke} Dreiecken")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.grid(True, linestyle=':', alpha=0.7)
+        plt.axis('equal')
+
+        # T-Liste erstellen
+        triangles = []
+        for i in range(N0 - 1):
+            for j in range(N0 - 1):
+                p1 = i * N0 + j
+                p2 = p1 + 1
+                p3 = p1 + N0
+                p4 = p3 + 1
+                triangles += [[p1, p2, p3], [p2, p4, p3]]
+                plt.triplot(points[:, 0], points[:, 1], [[p1, p2, p3]], marker='o', color='red')
+                plt.pause(interval=0.2)
+                plt.triplot(points[:, 0], points[:, 1], [[p2, p4, p3]], marker='o', color='red')
+                plt.pause(interval=0.2)
+
+        triangles = np.array(triangles)
+
+
+        
+
+
+
+    def execute_aufgabe(self, aufgabe = []):
+
+        aufgaben = {
+            'a': self.aufgabe_a,
+            # 'b': self.aufgabe_b,
+            # 'c': self.aufgabe_c,
+            # 'd': self.aufgabe_d,
+            # 'e': self.aufgabe_e,
+            # 'f': self.aufgabe_f,
+        }
+        to_execute = aufgabe if aufgabe else aufgaben.keys()
+
+        for e in to_execute:
+            if e in aufgaben:
+                aufgaben[e]()
+            else:
+                print(f"Ungültige Aufgabe: {e}")
+
+        plt.show()
+
+        
 
 
 
 
 if __name__ == "__main__":
     # a1 = Aufgabe1()
-    # a1.execute_aufgabe()
+    # a1.execute_aufgabe(['g'])
 
-    a2 = Aufgabe2()
-    a2.execute_aufgabe(['e'])
+    # a2 = Aufgabe2()
+    # a2.execute_aufgabe()
+
+    a3 = Aufgabe3()
+    a3.execute_aufgabe()
