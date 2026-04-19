@@ -10,7 +10,8 @@ beta = lambda x: x
 f = lambda x: -1 * x**3
 phi_a = 2
 phi_b = 6
-phi = lambda x, x_M: phi_a if x < x_M else phi_b
+global_x_M = (phi_a + phi_b) / 2
+phi = lambda x: phi_a if x < global_x_M else phi_b
 
 
 def gen_tlist(plist):
@@ -27,6 +28,7 @@ def gen_dR_phiR(plist):
     dR = np.array([tmp_min_val_idx[0][0], tmp_max_val_idx[0][0]])
     phiR = np.array([phi_a, phi_b])
     return dR, phiR
+
 
 def gen_table(tlist, plist, dR, phiR):
     table = []
@@ -76,20 +78,22 @@ def apply_boundary_conditions(K, D, dR, phiR):
     newD = np.delete(D, [dR[0], dR[1]])  # Rand a in D Vector wegstreichen
     return newK, newD
 
+
 def alt_apply_boundary_conditions(K, D, dR, phiR):
     rand_a = K[:, dR[0]] * phiR[0]  # spalte von Rand a in der K-Matrix kopieren
     rand_b = K[:, dR[1]] * phiR[1]  # spalte von Rand b in der K-Matrix kopieren
-    D -= (rand_a + rand_b)  # D Vector anpassen, da die Randbedingungen nicht mehr in der K-Matrix berücksichtigt werden
+    D -= (
+        rand_a + rand_b
+    )  # D Vector anpassen, da die Randbedingungen nicht mehr in der K-Matrix berücksichtigt werden
 
     K[:, dR[0]] = 0  # spalte von Rand a in der K-Matrix zu 0 setzen
     K[dR[0], :] = 0  # Zeile von Rand a in der K-Matrix zu 0 setzen
     K[:, dR[1]] = 0  # spalte von Rand b in der K-Matrix zu 0 setzen
     K[dR[1], :] = 0  # spalte von Rand b in der K-Matrix zu 0 setzen
-    K[dR[0], dR[1]] = 1 # diagonale zu 1 setzen
-    K[dR[1], dR[0]] = 1 # diagonale zu 1 setzen
+    K[dR[0], dR[1]] = 1  # diagonale zu 1 setzen
+    K[dR[1], dR[0]] = 1  # diagonale zu 1 setzen
 
     return K, D
-
 
 
 def sort_into_matrix(
@@ -99,7 +103,6 @@ def sort_into_matrix(
     K12: np.ndarray,
     D1: np.ndarray,
 ):
-    # This function is not implemented yet, but it will be used to sort the global stiffness matrix and load vector based on the tlist, dR, and phiR.
     K = np.zeros((len(plist), len(plist)))
     D = np.zeros(len(plist))
 
@@ -115,10 +118,11 @@ def sort_into_matrix(
     # print("K Matrix ohne Randbedingung:\n", K)
     # print("D Vector ohne Randbedingung:\n", D)
 
-
     return K, D
 
+
 # -------------------------------------------------------------------------------- Main Code --------------------------------------------------------------------------------
+
 
 def main():
     # Tabellenberechnung
@@ -141,7 +145,7 @@ def main():
         tlist,
         table["K11 = K22"].to_numpy(),
         table["K12 = K21"].to_numpy(),
-        table["D1 = D2"].to_numpy()
+        table["D1 = D2"].to_numpy(),
     )
     K, D = apply_boundary_conditions(K, D, dR, phiR)
 
@@ -151,7 +155,7 @@ def main():
     K = sp.csr_matrix(K)
 
     # solve LGS
-    sol = sp.linalg.spsolve(K, D) # Note D_sparse here is just D now
+    sol = sp.linalg.spsolve(K, D)  # Note D_sparse here is just D now
     # reconstruct the solution vector
     sol_phi = np.zeros(len(plist))
     # Hole die Indizes, an denen wir die Lösung berechnet haben (alles außer dR)
@@ -163,8 +167,6 @@ def main():
     sol_phi[dR[1]] = phiR[1]
 
     print("Lösung des LGS (phi):\n", sol_phi)
-
-
 
     # show in scatter plot
     plt.figure(figsize=(10, 6))
