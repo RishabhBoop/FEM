@@ -509,14 +509,16 @@ class Aufgabe3:
         h = 4
         x0, y0 = 0, 0
         xN, yN = l, h
-        N0 = 7
+        N0 = 4
         N = N0**2
         anzahl_dreiecke = 2 * (N0 - 1)**2
         print(f"Anzahl Dreiecke: {anzahl_dreiecke}, Anzahl Punkte: {N}, N0: {N0}")
 
         # Lege Punkte fest
-        px = np.linspace(x0, xN, N0)
-        py = np.linspace(y0, yN, N0)
+        px = np.random.uniform(x0, xN, N0)
+        px.sort()
+        py = np.random.uniform(y0, yN, N0)
+        py.sort()
         points = np.array([[x, y] for y in py for x in px])
         # print("Punkte:\n", points)
 
@@ -526,6 +528,7 @@ class Aufgabe3:
         plt.ylabel("y")
         plt.grid(True, linestyle=':', alpha=0.7)
         plt.axis('equal')
+        plt.tight_layout()
 
         # T-Liste erstellen
         triangles = []
