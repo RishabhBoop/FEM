@@ -12,12 +12,11 @@ TO_MB = 1024 * 1024
 
 # 1 d)
 def generate_t(pList: np.ndarray) -> np.ndarray:
-    t = []
-    pList = pList[pList[:, 0].argsort()] # Sortiere pList nach den x-Werten
-    plist_tmp = pList[:, 1][:-1]
-    plist_1 = pList[:, 1][1:]
-    t = np.array(list(zip(plist_tmp, plist_1)))
-    return t
+    tlist_tmp = np.argsort(plist)
+    tmp1 = tlist_tmp[0:-1]
+    tmp2 = tlist_tmp[1:]
+    tlist = np.array(list(zip(tmp1, tmp2)))
+    return tlist
 
 def get_teil_Abstand(plist: np.ndarray, tlist: np.ndarray) -> np.ndarray:
     plist = np.array(plist)
