@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
-from numba import float64, vectorize
+from numba import float64, vectorize, jit
 import time
 
 # -------------------------------- Global Functions --------------------------------
 
-
-def gen_randwerte_list():
+def gen_randwerte_list(xD, xR, plist):
     randelemente = []
     for val in xD + xR:
         # Check for matching coordinates in plist
@@ -17,18 +16,40 @@ def gen_randwerte_list():
     return np.array(randelemente)
 
 
+@jit(nopython=True)
+def vec_sort_into_matrix(
+    K11: np.ndarray, K12: np.ndarray, D1: np.ndarray, tlist: np.ndarray, plist_len: int
+):
+    K = np.zeros((plist_len, plist_len))
+    D = np.zeros(plist_len)
+
+    for i in range(len(tlist)):
+        t = tlist[i]
+        K[t[0], t[0]] += K11[i]  # K11 (local index 1)
+        K[t[1], t[1]] += K11[i]  # K22 (local index 2)
+        K[t[0], t[1]] += K12[i]  # K12 (local index 1,2)
+        K[t[1], t[0]] += K12[i]  # K21 (local index 2,1)
+        D[t[0]] += D1[i]
+        D[t[1]] += D1[i]
+
+    return K, D
+
+
 # ------------------------------------------------------------------------------------------------
 
 
 class fem_1d:
     def __init__(self, xD, xR, plist, alpha, beta, f, phi, gamma, q):
+        # --- Data needed to apply Randbedingungen ---
         self.dR = xR
         self.dD = xD
+        # --- Data needed to solve ---
         self.plist = plist
         self.tlist = None
         self.K = None
         self.D = None
         self.sol = None
+        # --- Functions ---
         self.alpha = alpha
         self.beta = beta
         self.f = f
@@ -43,7 +64,6 @@ class fem_1d:
         self.tlist = np.array(list(zip(tmp1, tmp2)))
 
     def gen_necessary_data(self):
-
         x1 = self.plist[self.tlist[:, 0]]
         x2 = self.plist[self.tlist[:, 1]]
         L_E = x2 - x1
@@ -67,28 +87,11 @@ class fem_1d:
         K12: np.ndarray,
         D1: np.ndarray,
     ):
-        len_plist = len(self.plist)
-        K = np.zeros((len_plist, len_plist))
-        D = np.zeros(len_plist)
-
-        for i in range(len(self.tlist)):
-            t = self.tlist[i]
-            K[t[0], t[0]] += K11[i]  # K11 (local index 1)
-            K[t[1], t[1]] += K11[i]  # K22 (local index 2)
-            K[t[0], t[1]] += K12[i]  # K12 (local index 1,2)
-            K[t[1], t[0]] += K12[i]  # K21 (local index 2,1)
-            D[t[0]] += D1[i]
-            D[t[1]] += D1[i]
-
-        self.K = K
-        self.D = D
+        self.K, self.D = vec_sort_into_matrix(K11, K12, D1, self.tlist, len(self.plist))
         # print("K Matrix ohne Randbedingung:\n", K)
         # print("D Vector ohne Randbedingung:\n", D)
 
-        return K, D
-
     def apply_robin_boundary_conditions(self, randelemente: np.ndarray):
-
         # sort out randlelemente for Robin RW (check if they are in xR)
         actualRE = [re for re in randelemente if self.plist[re] in xR]
 
@@ -107,13 +110,10 @@ class fem_1d:
 
     def apply_dirichlet_boundary_conditions(self, randelemente: np.ndarray):
         actualRE = [re for re in randelemente if self.plist[re] in xD]
-        rand_re = []
 
-        for re in actualRE:
-            phi_re = self.phi(self.plist[re])
-            rand_re.append(
-                self.K[:, re] * phi_re
-            )  # spalte von Rand re in der K-Matrix kopieren
+        rand_re = np.array(
+            [self.K[:, re] * self.phi(self.plist[re]) for re in actualRE]
+        )  # spalte von Rand re in der K-Matrix kopieren
 
         self.D -= np.sum(
             rand_re, axis=0
@@ -133,12 +133,9 @@ class fem_1d:
         self.K = newK
         self.D = newD
 
-        # return newK, newD
-
     def solve_LGS(self):
         K_Sparse = sp.csr_matrix(self.K)
         self.sol = sp.linalg.spsolve(K_Sparse, self.D)
-        # return sp.linalg.spsolve(K_Sparse, self.D)
 
     def reconstruct_solution(self, randelemente: np.ndarray):
         # numpy insert
@@ -151,12 +148,11 @@ class fem_1d:
 
         sol_new[free_indices] = self.sol  # fill with solution from LGS
 
-        sol_new[actualRE] = [
-            self.phi(x) for x in self.plist[actualRE]
-        ]  # fill with Dirichlet RW values
+        sol_new[actualRE] = self.phi(
+            self.plist[actualRE]
+        )  # fill with Dirichlet RW values
 
         self.sol = sol_new
-        # return sol_new
 
     def visualize_solution(self):
         plt.figure(figsize=(10, 6))
@@ -183,7 +179,7 @@ class fem_1d:
         t_sort = time.time() - t1
 
         t1 = time.time()
-        randelemente = gen_randwerte_list()
+        randelemente = gen_randwerte_list(self.dD, self.dR, self.plist)
         t_rand = time.time() - t1
 
         t1 = time.time()
@@ -225,7 +221,7 @@ class fem_1d:
             rec_str,
         ]
         len_sep = max(max(len(l) for l in lines), len(tot_str)) + 4
-        title_str = "Speed 1D FEM Solver"
+        title_str = f"Speed 1D FEM Solver ({len(self.plist)} Punkte, {len(self.tlist)} Elemente):"
         len_sep = max(len_sep, len(title_str) + 4)
 
         print("\n" + "=" * len_sep)
@@ -304,19 +300,22 @@ def f(x):
         return 1 + x
 
 
+@vectorize([float64(float64)])
 def phi(x):
     if 1 <= x <= 4:
         return np.exp(x)
     else:
-        return None
+        return 0.0
 
 
+@vectorize([float64(float64)])
 def gamma(x):
-    pass
+    return 0.0
 
 
+@vectorize([float64(float64)])
 def q(x):
-    pass
+    return 0.0
 
 
 fem_solver = fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
