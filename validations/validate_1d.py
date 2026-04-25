@@ -1,4 +1,5 @@
-import FEM_1D
+from src import FEM_1D
+
 from numba import float64, vectorize
 import numpy as np
 import matplotlib.pyplot as plt
