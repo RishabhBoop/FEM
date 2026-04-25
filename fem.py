@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.sparse as sp
-from numba import jit
+from numba import float64, vectorize
 import time
 
 
@@ -12,24 +12,24 @@ xR = []  # x-koordinaten der robin boundary conditions
 
 
 # ------------------------- Funktionen --------------------------
-@jit(nopython=True)
-def alpha(x) -> float:
+@vectorize([float64(float64)]) 
+def alpha(x):
     if 1.5 <= x <= 2.7:
         return 3
     else:
         return x**2
 
 
-@jit(nopython=True)
-def beta(x) -> float:
+@vectorize([float64(float64)]) 
+def beta(x):
     if 1 <= x <= 2:
         return x / (1 + x)
     else:
         return x**2
 
 
-@jit(nopython=True)
-def f(x) -> float:
+@vectorize([float64(float64)]) 
+def f(x):
     if 2 <= x <= 4:
         return x
     else:
@@ -117,30 +117,24 @@ def gen_table(tlist: np.ndarray, plist: np.ndarray) -> pd.DataFrame:
     return table
 
 
-@jit(nopython=True)
 def gen_necessary_data(
     tlist: np.ndarray, plist: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    # only gen K11, K12 and D1
-    K11 = []
-    K12 = []
-    D1 = []
-    for t in tlist:
-        x1 = plist[t[0]]
-        x2 = plist[t[1]]
-        L_E = x2 - x1
-        x_M = (x1 + x2) / 2
-        alpha_M = alpha(x_M)
-        beta_M = beta(x_M)
-        f_M = f(x_M)
-        K11.append((alpha_M / L_E) + (L_E * beta_M / 3))
-        # K22 = K11
 
-        K12.append((L_E * beta_M / 6) - (alpha_M / L_E))
-        # K21 = K12
+    x1 = plist[tlist[:, 0]]
+    x2 = plist[tlist[:, 1]]
+    L_E = x2 - x1
+    x_M = (x1 + x2) / 2
 
-        D1.append(L_E * f_M / 2)
-        # D2 = D1
+    alpha_M = alpha(x_M)
+    beta_M = beta(x_M)
+    f_M = f(x_M)
+
+    K11 = (alpha_M / L_E) + (L_E * beta_M / 3)
+
+    K12 = (L_E * beta_M / 6) - (alpha_M / L_E)
+
+    D1 = L_E * f_M / 2
 
     return K11, K12, D1
 
@@ -291,10 +285,20 @@ def validate_with_weizi_data(K, D, sol, plist):
     # wD = np.loadtxt("tst_1D/Netz1D_D.dat", dtype=float)
     wSol = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)
 
+
+    error = wSol - sol
+    error = np.abs(error)
+
+    # print errors
+    print(f"Maximale Abweichung in K: {np.max(error):.6e}")
+    print(f"Minimale Abweichung in K: {np.min(error):.6e}")
+    print(f"Mittlere Abweichung in K: {np.mean(error):.6e}")
+
+
     # Compare K
     plt.figure(figsize=(12, 5))
     plt.plot(
-        plist, np.abs(wSol - sol), marker="o", linestyle="", label="Difference in Solution"
+        plist, error, marker="o", linestyle="", label="Difference in Solution"
     )
     plt.xlabel("Punkte")
     plt.ylabel("Differenz")
