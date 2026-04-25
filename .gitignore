@@ -5,3 +5,4 @@
 *.png
 *.zip
 __pycache__/
+fem_project.egg-info/
