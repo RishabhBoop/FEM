@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fem-project"
+version = "0.1.0"
+description = "FEM project"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "numba"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
