@@ -756,18 +756,87 @@ class Aufgabe3:
         # plt.triplot(tri, color="gray", alpha=0.5)
         # plt.scatter(self.plist[:, 0], self.plist[:, 1], c=func_val)
 
-        
+    def schwerpunkt(self, triangle):
+        # Berechnet den Schwerpunkt eines Dreiecks gegeben durch die Indizes der Punkte
+        p1, p2, p3 = self.plist[triangle]
+        return (p1 + p2 + p3) / 3
+    
+    def aufgabe_e(self):
+        print("------------ e) ------------")
+        if self.tlist is None or self.plist is None:
+            self.aufgabe_b()
 
+        # all triangles in upper right corner
+        x_min, x_max = np.min(self.plist[:, 0]), np.max(self.plist[:, 0])
+        y_min, y_max = np.min(self.plist[:, 1]), np.max(self.plist[:, 1])
+        x_diff = x_max - x_min
+        y_diff = y_max - y_min
+        x_mid = x_min + x_diff / 2
+        y_mid = y_min + y_diff / 2
 
+        print(f"x_diff: {x_diff}, y_diff: {y_diff}")
+        print(f"Upper right corner starts at x > {x_mid} and y > {y_mid}")
+
+        # plt.figure(figsize=(10, 6))
+        plt.triplot(self.plist[:, 0], self.plist[:, 1], self.tlist, color="gray", alpha=0.5)
+
+        for triangle in self.tlist:
+            # calculate the schwerpunkt of all triangles
+            sp = self.schwerpunkt(triangle)
+
+            # check if the schwerpunkt is in the upper right corner
+            if sp[0] > x_mid and sp[1] > y_mid:
+                plt.plot(sp[0], sp[1], marker='x', color='red')
+
+    def aufgabe_f(self):
+        print("------------ f) ------------")
+        # Anfangs und Endpunkt
+        y0 = 1
+        yN = 5
+        x0 = -1
+        xN = 2
+
+        # Anzahl der Positionen N=N0*N0 Anzahl Dreiecke etwa N0*N0/2
+        N0 = 200
+
+        # Lege Punkte fest
+        points = []
+        for i in range(N0):
+            for j in range(N0):
+                x = x0 + i * (xN - x0) / (N0 - 1)
+                y = y0 + j * (yN - y0) / (N0 - 1)
+                points += [[x, y]]
+        points = np.array(points)
+
+        # Nummeriere und lege Elemente fest
+        tri = Delaunay(points)
+
+        # entnehme p und t-Liste
+        t = tri.simplices
+        p = 1.0 * points
+
+        print("p-Liste: ",p)
+        print("t-Liste: ",t)
+
+        plt.figure(figsize=(10, 6))
+
+        # Male die Dreiecke
+        plt.triplot(p[:, 0], p[:, 1], t)
+
+        # male Kreise an den Positionen
+        plt.plot(p[:, 0], p[:, 1], "x")
+
+        self.tlist = t
+        self.plist = p
 
     def execute_aufgabe(self, aufgabe=[]):
         aufgaben = {
             # 'a': self.aufgabe_a,
             # "b": self.aufgabe_b,
             # "c": self.aufgabe_c,
-            'd': self.aufgabe_d,
+            # 'd': self.aufgabe_d,
             # 'e': self.aufgabe_e,
-            # 'f': self.aufgabe_f,
+            'f': self.aufgabe_f,
         }
         to_execute = aufgabe if aufgabe else aufgaben.keys()
 
