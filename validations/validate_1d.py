@@ -3,8 +3,11 @@ from src import FEM_1D
 from numba import float64, vectorize
 import numpy as np
 import matplotlib.pyplot as plt
+from os import path
 
-plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
+current_dir = path.dirname(path.abspath(__file__))
+
+plist = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_p.dat", dtype=float)
 
 
 @vectorize([float64(float64)])
@@ -51,7 +54,7 @@ def a1_a():
     def q(x):
         return 0.0
 
-    sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungA.dat", dtype=float)
     fem_solver = FEM_1D.fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     fem_solver.full_solve(title="Lösung A")
     fem_solver.validate_sol(sol_tst, title="Lösung A")
@@ -73,7 +76,7 @@ def a1_b():
     xD = []  # x-koordinaten der dirichlet boundary conditions
     xR = [1.0, 4.0]  # x-koordinaten der robin boundary conditions
 
-    sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungB.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungB.dat", dtype=float)
     fem_solver = FEM_1D.fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     fem_solver.full_solve(title="Lösung B")
     fem_solver.validate_sol(sol_tst, title="Lösung B")
@@ -95,7 +98,7 @@ def a1_c():
     xD = [4.0]  # x-koordinaten der dirichlet boundary conditions
     xR = [1.0]  # x-koordinaten der robin boundary conditions
 
-    sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungC.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungC.dat", dtype=float)
     fem_solver = FEM_1D.fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     fem_solver.full_solve(title="Lösung C")
     fem_solver.validate_sol(sol_tst, title="Lösung C")
