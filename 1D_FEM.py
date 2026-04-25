@@ -6,7 +6,6 @@ from numba import float64, jit, vectorize
 import time
 
 # -------------------------------- Anpassen je nach Aufgabe --------------------------------
-# ------------------------- Randbedingungen --------------------------
 xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
 xR = []  # x-koordinaten der robin boundary conditions
 
@@ -49,6 +48,17 @@ def gamma(x):
 def q(x):
     pass
 
+# -------------------------------- Global Functions --------------------------------
+
+def gen_randwerte_list():
+    randelemente = []
+    for val in xD + xR:
+        # Check for matching coordinates in plist
+        idx = np.where(np.isclose(plist, val))[0]
+        if len(idx) > 0:
+            randelemente.append(idx[0])
+    return np.array(randelemente)
+# ------------------------------------------------------------------------------------------------
 
 class fem_1d:
     def __init__(self, xD, xR, plist):
@@ -66,17 +76,7 @@ class fem_1d:
         tmp2 = tlist_tmp[1:]
         self.tlist = np.array(list(zip(tmp1, tmp2)))
 
-    def gen_randwerte_list(self) -> np.ndarray:
-        randelemente = []
-        for val in xD + xR:
-            # Check for matching coordinates in plist
-            idx = np.where(np.isclose(plist, val))[0]
-            if len(idx) > 0:
-                randelemente.append(idx[0])
-        return np.array(randelemente)
-
-    def gen_necessary_data(self
-    ):
+    def gen_necessary_data(self):
 
         x1 = self.plist[self.tlist[:, 0]]
         x2 = self.plist[self.tlist[:, 1]]
@@ -160,7 +160,9 @@ class fem_1d:
             newK, [re for re in actualRE], axis=0
         )  # Zeile von Rand a in der K-Matrix wegstreichen
 
-        newD = np.delete(self.D, [re for re in actualRE])  # Rand a in D Vector wegstreichen
+        newD = np.delete(
+            self.D, [re for re in actualRE]
+        )  # Rand a in D Vector wegstreichen
 
         self.K = newK
         self.D = newD
@@ -183,11 +185,13 @@ class fem_1d:
 
         sol_new[free_indices] = self.sol  # fill with solution from LGS
 
-        sol_new[actualRE] = [phi(x) for x in self.plist[actualRE]]  # fill with Dirichlet RW values
+        sol_new[actualRE] = [
+            phi(x) for x in self.plist[actualRE]
+        ]  # fill with Dirichlet RW values
 
         self.sol = sol_new
         # return sol_new
-    
+
     def visualize_solution(self):
         plt.figure(figsize=(10, 6))
         plt.scatter(self.plist, self.sol, color="blue", label="Lösung (phi)")
@@ -199,58 +203,104 @@ class fem_1d:
 
     def full_solve(self):
         t0 = time.time()
-        
+
         t1 = time.time()
         self.gen_tlist()
         t_gen_tlist = time.time() - t1
-        
+
         t1 = time.time()
         K11, K12, D1 = self.gen_necessary_data()
         t_gen_data = time.time() - t1
-        
+
         t1 = time.time()
         self.sort_into_matrix(K11, K12, D1)
         t_sort = time.time() - t1
-        
+
         t1 = time.time()
-        randelemente = self.gen_randwerte_list()
+        randelemente = gen_randwerte_list()
         t_rand = time.time() - t1
-        
+
         t1 = time.time()
         self.apply_robin_boundary_conditions(randelemente)
         t_robin = time.time() - t1
-        
+
         t1 = time.time()
         self.apply_dirichlet_boundary_conditions(randelemente)
         t_dirich = time.time() - t1
-        
+
         t1 = time.time()
         self.solve_LGS()
         t_solve = time.time() - t1
-        
+
         t1 = time.time()
         self.reconstruct_solution(randelemente)
         t_recon = time.time() - t1
-        
+
         t_total = time.time() - t0
-        
-        print(f"------------- Timings für {len(self.plist)} Elemente -------------")
-        print(f"gen_tlist:                  {t_gen_tlist:.6f} s")
-        print(f"gen_necessary_data:         {t_gen_data:.6f} s")
-        print(f"sort_into_matrix:           {t_sort:.6f} s")
-        print(f"gen_randwerte_list:         {t_rand:.6f} s")
-        print(f"apply_robin_bc:             {t_robin:.6f} s")
-        print(f"apply_dirichlet_bc:         {t_dirich:.6f} s")
-        print(f"solve_LGS:                  {t_solve:.6f} s")
-        print(f"reconstruct_solution:       {t_recon:.6f} s")
-        print(f"TOTAL (excl. visualization): {t_total:.6f} s")
-        print("-----------------------------------")
-        
+
+        t_gen_str = f"T-List generierung:              {t_gen_tlist:.6f} s"
+        k_gen_str = f"K11, K12, D1 Matrix generierung: {t_gen_data:.6f} s"
+        sort_str  = f"Einsortieren in Matrix:          {t_sort:.6f} s"
+        rand_str  = f"Randwertliste generierung:       {t_rand:.6f} s"
+        rob_str   = f"Robin-Randwert anwenden:         {t_robin:.6f} s"
+        dir_str   = f"Dirichlet-Randwert anwenden:     {t_dirich:.6f} s"
+        sol_str   = f"Sparse-Matrix lösen:             {t_solve:.6f} s"
+        rec_str   = f"Lösung rekonstruieren:           {t_recon:.6f} s"
+        tot_str   = f"=> TOTAL (excl. visualization):  {t_total:.6f} s"
+
+        lines = [t_gen_str, k_gen_str, sort_str, rand_str, rob_str, dir_str, sol_str, rec_str]
+        len_sep = max(max(len(l) for l in lines), len(tot_str)) + 4
+        title_str = "Speed 1D FEM Solver"
+        len_sep = max(len_sep, len(title_str) + 4)
+
+        print("\n" + "=" * len_sep)
+        print(f"  {title_str}")
+        print("-" * len_sep)
+        for line in lines:
+            print(f"  {line}")
+        print("-" * len_sep)
+        print(f"  {tot_str}")
+        print("=" * len_sep + "\n")
+
         self.visualize_solution()
-        plt.show()
 
+    def validate_sol(self, sol_test, title="Validierung mit Weizi Data"):
+        if len(sol_test) != len(self.sol):
+            raise ValueError("Länge der Testlösung stimmt nicht mit berechneter Lösung überein.")
+        
+        error = np.abs(sol_test - self.sol)
+        
+        title_str = f"Abweichungen für {title} ({len(self.plist)} Elemente):"
+        max_str = f"Maximale Abweichung: {np.max(error):.6e}"
+        min_str = f"Minimale Abweichung: {np.min(error):.6e}"
+        mean_str = f"Mittlere Abweichung: {np.mean(error):.6e}"
+        len_sep = max(len(max_str), len(min_str), len(mean_str), len(title_str)) + 4
 
+        print("\n" + "=" * len_sep)
+        print(f"  {title_str}")
+        print("-" * len_sep)
+        print(f"  {max_str}")
+        print(f"  {min_str}")
+        print(f"  {mean_str}")
+        print("=" * len_sep + "\n")
+
+        plt.figure(figsize=(12, 5))
+        plt.plot(
+            self.plist, error, marker="o", linestyle="", label="Difference in Solution"
+        )
+        plt.xlabel("Punkte")
+        plt.ylabel("abs(Differenz)")
+        plt.title("Validierung mit Weizi Data")
+        plt.legend()
+
+        
 
 plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
+sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)#
+
+# --------------------------------- Main Code ---------------------------------
 fem_solver = fem_1d(xD, xR, plist)
 fem_solver.full_solve()
+fem_solver.validate_sol(sol_tst, title="Lösung A")
+plt.show()
+
