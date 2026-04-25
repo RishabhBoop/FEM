@@ -34,7 +34,6 @@ def vec_sort_into_matrix(
 
     return K, D
 
-
 # ------------------------------------------------------------------------------------------------
 
 
@@ -163,7 +162,7 @@ class fem_1d:
         plt.grid()
         plt.legend()
 
-    def full_solve(self):
+    def full_solve(self, title):
         t0 = time.time()
 
         t1 = time.time()
@@ -221,7 +220,7 @@ class fem_1d:
             rec_str,
         ]
         len_sep = max(max(len(l) for l in lines), len(tot_str)) + 4
-        title_str = f"Speed 1D FEM Solver ({len(self.plist)} Punkte, {len(self.tlist)} Elemente):"
+        title_str = f"{title} - Speed ({len(self.plist)} Punkte, {len(self.tlist)} Elemente):"
         len_sep = max(len_sep, len(title_str) + 4)
 
         print("\n" + "=" * len_sep)
@@ -231,7 +230,7 @@ class fem_1d:
             print(f"  {line}")
         print("-" * len_sep)
         print(f"  {tot_str}")
-        print("=" * len_sep + "\n")
+        print("=" * len_sep)
 
         self.visualize_solution()
 
@@ -255,15 +254,13 @@ class fem_1d:
         print(f"  {max_str}")
         print(f"  {min_str}")
         print(f"  {mean_str}")
-        print("=" * len_sep + "\n")
+        print("=" * len_sep)
 
         plt.figure(figsize=(12, 5))
         plt.plot(
             self.plist, sol_test, marker="o", linestyle="", label="Weizis Testlösung"
         )
-        plt.plot(
-            self.plist, self.sol, marker="x", linestyle="", label="Meine Lösung"
-        )
+        plt.plot(self.plist, self.sol, marker="x", linestyle="", label="Meine Lösung")
         plt.xlabel("Punkte")
         plt.ylabel("Lösung")
         plt.title(title)
@@ -277,4 +274,3 @@ class fem_1d:
         plt.ylabel("abs(Differenz)")
         plt.title("Validierung mit Weizi Data")
         plt.legend()
-
