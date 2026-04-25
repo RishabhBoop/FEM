@@ -1,54 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 import scipy.sparse as sp
-from numba import float64, jit, vectorize
+from numba import float64, vectorize
 import time
 
-# -------------------------------- Anpassen je nach Aufgabe --------------------------------
-xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
-xR = []  # x-koordinaten der robin boundary conditions
-
-
-@vectorize([float64(float64)])
-def alpha(x):
-    if 1.5 <= x <= 2.7:
-        return 3
-    else:
-        return x**2
-
-
-@vectorize([float64(float64)])
-def beta(x):
-    if 1 <= x <= 2:
-        return x / (1 + x)
-    else:
-        return x**2
-
-
-@vectorize([float64(float64)])
-def f(x):
-    if 2 <= x <= 4:
-        return x
-    else:
-        return 1 + x
-
-
-def phi(x):
-    if 1 <= x <= 4:
-        return np.exp(x)
-    else:
-        return None
-
-
-def gamma(x):
-    pass
-
-
-def q(x):
-    pass
-
 # -------------------------------- Global Functions --------------------------------
+
 
 def gen_randwerte_list():
     randelemente = []
@@ -58,10 +15,13 @@ def gen_randwerte_list():
         if len(idx) > 0:
             randelemente.append(idx[0])
     return np.array(randelemente)
+
+
 # ------------------------------------------------------------------------------------------------
 
+
 class fem_1d:
-    def __init__(self, xD, xR, plist):
+    def __init__(self, xD, xR, plist, alpha, beta, f, phi, gamma, q):
         self.dR = xR
         self.dD = xD
         self.plist = plist
@@ -69,6 +29,12 @@ class fem_1d:
         self.K = None
         self.D = None
         self.sol = None
+        self.alpha = alpha
+        self.beta = beta
+        self.f = f
+        self.phi = phi
+        self.gamma = gamma
+        self.q = q
 
     def gen_tlist(self):
         tlist_tmp = np.argsort(self.plist)
@@ -83,9 +49,9 @@ class fem_1d:
         L_E = x2 - x1
         x_M = (x1 + x2) / 2
 
-        alpha_M = alpha(x_M)
-        beta_M = beta(x_M)
-        f_M = f(x_M)
+        alpha_M = self.alpha(x_M)
+        beta_M = self.beta(x_M)
+        f_M = self.f(x_M)
 
         K11 = (alpha_M / L_E) + (L_E * beta_M / 3)
 
@@ -127,8 +93,8 @@ class fem_1d:
         actualRE = [re for re in randelemente if self.plist[re] in xR]
 
         for re in actualRE:
-            gamma_val = gamma(self.plist[re])
-            q_val = q(self.plist[re])
+            gamma_val = self.gamma(self.plist[re])
+            q_val = self.q(self.plist[re])
 
             # adjust K and D for Robin BCs
             self.K[re, re] += gamma_val
@@ -144,7 +110,7 @@ class fem_1d:
         rand_re = []
 
         for re in actualRE:
-            phi_re = phi(self.plist[re])
+            phi_re = self.phi(self.plist[re])
             rand_re.append(
                 self.K[:, re] * phi_re
             )  # spalte von Rand re in der K-Matrix kopieren
@@ -186,7 +152,7 @@ class fem_1d:
         sol_new[free_indices] = self.sol  # fill with solution from LGS
 
         sol_new[actualRE] = [
-            phi(x) for x in self.plist[actualRE]
+            self.phi(x) for x in self.plist[actualRE]
         ]  # fill with Dirichlet RW values
 
         self.sol = sol_new
@@ -240,15 +206,24 @@ class fem_1d:
 
         t_gen_str = f"T-List generierung:              {t_gen_tlist:.6f} s"
         k_gen_str = f"K11, K12, D1 Matrix generierung: {t_gen_data:.6f} s"
-        sort_str  = f"Einsortieren in Matrix:          {t_sort:.6f} s"
-        rand_str  = f"Randwertliste generierung:       {t_rand:.6f} s"
-        rob_str   = f"Robin-Randwert anwenden:         {t_robin:.6f} s"
-        dir_str   = f"Dirichlet-Randwert anwenden:     {t_dirich:.6f} s"
-        sol_str   = f"Sparse-Matrix lösen:             {t_solve:.6f} s"
-        rec_str   = f"Lösung rekonstruieren:           {t_recon:.6f} s"
-        tot_str   = f"=> TOTAL (excl. visualization):  {t_total:.6f} s"
+        sort_str = f"Einsortieren in Matrix:          {t_sort:.6f} s"
+        rand_str = f"Randwertliste generierung:       {t_rand:.6f} s"
+        rob_str = f"Robin-Randwert anwenden:         {t_robin:.6f} s"
+        dir_str = f"Dirichlet-Randwert anwenden:     {t_dirich:.6f} s"
+        sol_str = f"Sparse-Matrix lösen:             {t_solve:.6f} s"
+        rec_str = f"Lösung rekonstruieren:           {t_recon:.6f} s"
+        tot_str = f"=> TOTAL (excl. visualization):  {t_total:.6f} s"
 
-        lines = [t_gen_str, k_gen_str, sort_str, rand_str, rob_str, dir_str, sol_str, rec_str]
+        lines = [
+            t_gen_str,
+            k_gen_str,
+            sort_str,
+            rand_str,
+            rob_str,
+            dir_str,
+            sol_str,
+            rec_str,
+        ]
         len_sep = max(max(len(l) for l in lines), len(tot_str)) + 4
         title_str = "Speed 1D FEM Solver"
         len_sep = max(len_sep, len(title_str) + 4)
@@ -266,10 +241,12 @@ class fem_1d:
 
     def validate_sol(self, sol_test, title="Validierung mit Weizi Data"):
         if len(sol_test) != len(self.sol):
-            raise ValueError("Länge der Testlösung stimmt nicht mit berechneter Lösung überein.")
-        
+            raise ValueError(
+                "Länge der Testlösung stimmt nicht mit berechneter Lösung überein."
+            )
+
         error = np.abs(sol_test - self.sol)
-        
+
         title_str = f"Abweichungen für {title} ({len(self.plist)} Elemente):"
         max_str = f"Maximale Abweichung: {np.max(error):.6e}"
         min_str = f"Minimale Abweichung: {np.min(error):.6e}"
@@ -293,14 +270,56 @@ class fem_1d:
         plt.title("Validierung mit Weizi Data")
         plt.legend()
 
-        
 
 plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
-sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)#
+sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)  #
 
 # --------------------------------- Main Code ---------------------------------
-fem_solver = fem_1d(xD, xR, plist)
+# -------------------------------- Anpassen je nach Aufgabe --------------------------------
+xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
+xR = []  # x-koordinaten der robin boundary conditions
+
+
+@vectorize([float64(float64)])
+def alpha(x):
+    if 1.5 <= x <= 2.7:
+        return 3
+    else:
+        return x**2
+
+
+@vectorize([float64(float64)])
+def beta(x):
+    if 1 <= x <= 2:
+        return x / (1 + x)
+    else:
+        return x**2
+
+
+@vectorize([float64(float64)])
+def f(x):
+    if 2 <= x <= 4:
+        return x
+    else:
+        return 1 + x
+
+
+def phi(x):
+    if 1 <= x <= 4:
+        return np.exp(x)
+    else:
+        return None
+
+
+def gamma(x):
+    pass
+
+
+def q(x):
+    pass
+
+
+fem_solver = fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
 fem_solver.full_solve()
 fem_solver.validate_sol(sol_tst, title="Lösung A")
 plt.show()
-
