@@ -41,8 +41,8 @@ def vec_sort_into_matrix(
 class fem_1d:
     def __init__(self, xD, xR, plist, alpha, beta, f, phi, gamma, q):
         # --- Data needed to apply Randbedingungen ---
-        self.dR = xR
-        self.dD = xD
+        self.xR = xR
+        self.xD = xD
         # --- Data needed to solve ---
         self.plist = plist
         self.tlist = None
@@ -93,7 +93,7 @@ class fem_1d:
 
     def apply_robin_boundary_conditions(self, randelemente: np.ndarray):
         # sort out randlelemente for Robin RW (check if they are in xR)
-        actualRE = [re for re in randelemente if self.plist[re] in xR]
+        actualRE = [re for re in randelemente if self.plist[re] in self.xR]
 
         for re in actualRE:
             gamma_val = self.gamma(self.plist[re])
@@ -109,7 +109,7 @@ class fem_1d:
         # return K, D
 
     def apply_dirichlet_boundary_conditions(self, randelemente: np.ndarray):
-        actualRE = [re for re in randelemente if self.plist[re] in xD]
+        actualRE = [re for re in randelemente if self.plist[re] in self.xD]
 
         rand_re = np.array(
             [self.K[:, re] * self.phi(self.plist[re]) for re in actualRE]
@@ -142,7 +142,7 @@ class fem_1d:
         if len(self.sol) == len(self.plist):
             return
 
-        actualRE = [re for re in randelemente if self.plist[re] in xD]
+        actualRE = [re for re in randelemente if self.plist[re] in self.xD]
         sol_new = np.zeros(len(self.plist))
         free_indices = np.delete(np.arange(len(self.plist)), actualRE)
 
@@ -179,7 +179,7 @@ class fem_1d:
         t_sort = time.time() - t1
 
         t1 = time.time()
-        randelemente = gen_randwerte_list(self.dD, self.dR, self.plist)
+        randelemente = gen_randwerte_list(self.xD, self.xR, self.plist)
         t_rand = time.time() - t1
 
         t1 = time.time()
@@ -266,57 +266,3 @@ class fem_1d:
         plt.title("Validierung mit Weizi Data")
         plt.legend()
 
-
-plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
-sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)  #
-
-
-# --------------------------------- Main Code ---------------------------------
-
-# Test with Weizi Data - A1/a
-def a1_a():
-    xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
-    xR = []  # x-koordinaten der robin boundary conditions
-
-    @vectorize([float64(float64)])
-    def alpha(x):
-        if 1.5 <= x <= 2.7:
-            return 3
-        else:
-            return x**2
-
-    @vectorize([float64(float64)])
-    def beta(x):
-        if 1 <= x <= 2:
-            return x / (1 + x)
-        else:
-            return x**2
-
-    @vectorize([float64(float64)])
-    def f(x):
-        if 2 <= x <= 4:
-            return x
-        else:
-            return 1 + x
-
-    @vectorize([float64(float64)])
-    def phi(x):
-        if 1 <= x <= 4:
-            return np.exp(x)
-        else:
-            return 0.0
-
-    @vectorize([float64(float64)])
-    def gamma(x):
-        return 0.0
-
-    @vectorize([float64(float64)])
-    def q(x):
-        return 0.0
-    
-    fem_solver = fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
-    fem_solver.full_solve()
-    fem_solver.validate_sol(sol_tst, title="Lösung A")
-
-    
-plt.show()
