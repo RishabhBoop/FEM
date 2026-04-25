@@ -260,7 +260,6 @@ class fem_1d:
         t_gen_str = f"T-List generierung:              {t_gen_tlist:.6f} s"
         k_gen_str = f"K11, K12, D1 Matrix generierung: {t_gen_data:.6f} s"
         sort_str = f"Einsortieren in Matrix:          {t_sort:.6f} s"
-        rand_str = f"Randwertliste generierung:       {t_rand:.6f} s"
         rob_str = f"Robin-Randwert anwenden:         {t_robin:.6f} s"
         dir_str = f"Dirichlet-Randwert anwenden:     {t_dirich:.6f} s"
         sol_str = f"Sparse-Matrix lösen:             {t_solve:.6f} s"
@@ -271,7 +270,6 @@ class fem_1d:
             t_gen_str,
             k_gen_str,
             sort_str,
-            rand_str,
             rob_str,
             dir_str,
             sol_str,
