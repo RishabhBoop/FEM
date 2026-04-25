@@ -16,3 +16,9 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.black]
+line-length = 120
+
+[tool.autopep8]
+max_line_length = 120

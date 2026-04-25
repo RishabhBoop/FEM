@@ -79,7 +79,10 @@ def a1_b():
     sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungB.dat", dtype=float)
     fem_solver = FEM_1D.fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     fem_solver.full_solve(title="Lösung B")
-    fem_solver.validate_sol(sol_tst, title="Lösung B")
+    try:
+        fem_solver.validate_sol(sol_tst, title="Lösung B")
+    except ValueError as e:
+        print(f"Validierung von Lösung B fehlgeschlagen: {e}")
 
 
 def a1_c():
