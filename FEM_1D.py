@@ -270,55 +270,53 @@ class fem_1d:
 plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
 sol_tst = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)  #
 
+
 # --------------------------------- Main Code ---------------------------------
-# -------------------------------- Anpassen je nach Aufgabe --------------------------------
-xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
-xR = []  # x-koordinaten der robin boundary conditions
 
+# Test with Weizi Data - A1/a
+def a1_a():
+    xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
+    xR = []  # x-koordinaten der robin boundary conditions
 
-@vectorize([float64(float64)])
-def alpha(x):
-    if 1.5 <= x <= 2.7:
-        return 3
-    else:
-        return x**2
+    @vectorize([float64(float64)])
+    def alpha(x):
+        if 1.5 <= x <= 2.7:
+            return 3
+        else:
+            return x**2
 
+    @vectorize([float64(float64)])
+    def beta(x):
+        if 1 <= x <= 2:
+            return x / (1 + x)
+        else:
+            return x**2
 
-@vectorize([float64(float64)])
-def beta(x):
-    if 1 <= x <= 2:
-        return x / (1 + x)
-    else:
-        return x**2
+    @vectorize([float64(float64)])
+    def f(x):
+        if 2 <= x <= 4:
+            return x
+        else:
+            return 1 + x
 
+    @vectorize([float64(float64)])
+    def phi(x):
+        if 1 <= x <= 4:
+            return np.exp(x)
+        else:
+            return 0.0
 
-@vectorize([float64(float64)])
-def f(x):
-    if 2 <= x <= 4:
-        return x
-    else:
-        return 1 + x
-
-
-@vectorize([float64(float64)])
-def phi(x):
-    if 1 <= x <= 4:
-        return np.exp(x)
-    else:
+    @vectorize([float64(float64)])
+    def gamma(x):
         return 0.0
 
+    @vectorize([float64(float64)])
+    def q(x):
+        return 0.0
+    
+    fem_solver = fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
+    fem_solver.full_solve()
+    fem_solver.validate_sol(sol_tst, title="Lösung A")
 
-@vectorize([float64(float64)])
-def gamma(x):
-    return 0.0
-
-
-@vectorize([float64(float64)])
-def q(x):
-    return 0.0
-
-
-fem_solver = fem_1d(xD, xR, plist, alpha, beta, f, phi, gamma, q)
-fem_solver.full_solve()
-fem_solver.validate_sol(sol_tst, title="Lösung A")
+    
 plt.show()
