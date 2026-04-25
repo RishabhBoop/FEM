@@ -259,6 +259,18 @@ class fem_1d:
 
         plt.figure(figsize=(12, 5))
         plt.plot(
+            self.plist, sol_test, marker="o", linestyle="", label="Weizis Testlösung"
+        )
+        plt.plot(
+            self.plist, self.sol, marker="x", linestyle="", label="Meine Lösung"
+        )
+        plt.xlabel("Punkte")
+        plt.ylabel("Lösung")
+        plt.title(title)
+        plt.legend()
+
+        plt.figure(figsize=(12, 5))
+        plt.plot(
             self.plist, error, marker="o", linestyle="", label="Difference in Solution"
         )
         plt.xlabel("Punkte")
