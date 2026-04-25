@@ -11,7 +11,7 @@ import pickle
 TO_MB = 1024 * 1024
 
 # 1 d)
-def generate_t(pList: np.ndarray) -> np.ndarray:
+def generate_t(plist: np.ndarray) -> np.ndarray:
     tlist_tmp = np.argsort(plist)
     tmp1 = tlist_tmp[0:-1]
     tmp2 = tlist_tmp[1:]
