@@ -3,28 +3,37 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.sparse as sp
 from numba import jit
+import time
+
 
 # ------------------------- Randbedingungen --------------------------
-xD = []  # x-koordinaten der dirichlet boundary conditions
-xR = [1, 2]  # x-koordinaten der robin boundary conditions
-dD = []  # dirichlet boundary conditions
-dR = [(3, 4), (6, 7)]  # Robin boundary conditions (tuple (gamma, q))
+xD = [1.0, 4.0]  # x-koordinaten der dirichlet boundary conditions
+xR = []  # x-koordinaten der robin boundary conditions
 
 
 # ------------------------- Funktionen --------------------------
 @jit(nopython=True)
-def alpha(x):
-    return x**2
+def alpha(x) -> float:
+    if 1.5 <= x <= 2.7:
+        return 3
+    else:
+        return x**2
 
 
 @jit(nopython=True)
-def beta(x):
-    return x
+def beta(x) -> float:
+    if 1 <= x <= 2:
+        return x / (1 + x)
+    else:
+        return x**2
 
 
 @jit(nopython=True)
-def f(x):
-    return -1 * x**3
+def f(x) -> float:
+    if 2 <= x <= 4:
+        return x
+    else:
+        return 1 + x
 
 
 global_xa = xR[0] if xR else xD[0]
@@ -34,21 +43,20 @@ global_x_M = (global_xa + global_xb) / 2
 
 
 def phi(x):
-    return dD[0] if x < global_x_M else dD[1]
+    if 1 <= x <= 4:
+        print(f"phi({x}) called")
+        return np.exp(x)
+    else:
+        print(f"phi({x}) called but x is out of bounds")
+        return None
 
 
 def gamma(x):
-    if x < global_x_M:
-        return dR[0][0]
-    else:
-        return dR[0][1]
+    pass
 
 
 def q(x):
-    if x < global_x_M:
-        return dR[1][0]
-    else:
-        return dR[1][1]
+    pass
 
 
 # ------------------------- Berechnung -------------------------
@@ -63,10 +71,13 @@ def gen_tlist(plist: np.ndarray) -> np.ndarray:
 
 
 def gen_randwerte_liste(plist: np.ndarray) -> np.ndarray:
-    tmp_max_val_idx = np.where(plist == np.max(plist))
-    tmp_min_val_idx = np.where(plist == np.min(plist))
-    randelemente = np.array([tmp_min_val_idx[0][0], tmp_max_val_idx[0][0]])
-    return randelemente
+    randelemente = []
+    for val in xD + xR:
+        # Check for matching coordinates in plist
+        idx = np.where(np.isclose(plist, val))[0]
+        if len(idx) > 0:
+            randelemente.append(idx[0])
+    return np.array(randelemente)
 
 
 def gen_table(tlist: np.ndarray, plist: np.ndarray) -> pd.DataFrame:
@@ -158,10 +169,11 @@ def sort_into_matrix(
 
     return K, D
 
+
 def apply_robin_boundary_conditions(
     K: np.ndarray, D: np.ndarray, randelemente: np.ndarray, plist: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
-    
+
     # sort out randlelemente for Robin RW (check if they are in xR)
     actualRE = [re for re in randelemente if plist[re] in xR]
 
@@ -175,17 +187,20 @@ def apply_robin_boundary_conditions(
 
     return K, D
 
+
 def apply_dirichlet_boundary_conditions(
     K: np.ndarray, D: np.ndarray, randelemente: np.ndarray, plist: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     actualRE = [re for re in randelemente if plist[re] in xD]
-    rand_re = []    
+    rand_re = []
 
     for re in actualRE:
         phi_re = phi(plist[re])
         rand_re.append(K[:, re] * phi_re)  # spalte von Rand re in der K-Matrix kopieren
-    
-    D -= (np.sum(rand_re, axis=0))  # D Vector anpassen, da die Randbedingungen nicht mehr in der K-Matrix berücksichtigt werden
+
+    D -= np.sum(
+        rand_re, axis=0
+    )  # D Vector anpassen, da die Randbedingungen nicht mehr in der K-Matrix berücksichtigt werden
 
     newK = np.delete(
         K, [re for re in actualRE], axis=1
@@ -194,9 +209,7 @@ def apply_dirichlet_boundary_conditions(
         newK, [re for re in actualRE], axis=0
     )  # Zeile von Rand a in der K-Matrix wegstreichen
 
-    newD = np.delete(
-        D, [re for re in actualRE]
-    )  # Rand a in D Vector wegstreichen
+    newD = np.delete(D, [re for re in actualRE])  # Rand a in D Vector wegstreichen
     return newK, newD
 
 
@@ -237,49 +250,98 @@ def reconstruct_sol(
     return sol_new
 
 
+# ------------------------- Printing and Visualization functions -------------------------
+def print_RB():
+    if xD:
+        print("Dirichlet-Randbedingungen:")
+        for x in xD:
+            print(f"\tphi({x}) = {phi(x)}")
+
+    if xR:
+        print("Robin-Randbedingungen:\n")
+        for x in xR:
+            print(f"\tgamma({x}) = {gamma(x)}, q({x}) = {q(x)}")
+
+
+def plot_sol(plist: np.ndarray, sol_phi: np.ndarray):
+    plt.figure(figsize=(10, 6))
+    plt.scatter(plist, sol_phi, color="blue", label="Lösung (phi)")
+    plt.title("Lösung der DGL an den Punkten")
+    plt.xlabel("Punkte (plist)")
+    plt.ylabel("Lösung (phi)")
+    plt.grid()
+    plt.legend()
+    # plt.show()
+
+
+def show_table(tlist: np.ndarray, plist: np.ndarray):
+    table = gen_table(tlist, plist)
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.width", 1000)
+    pd.set_option("display.precision", 6)  # Controls decimal places
+    print("-" * 100)
+    print(table.to_string(index=False))
+    print("-" * 100)
+
+
+# ------------------------- Validierung mit Weizi Data -------------------------
+def validate_with_weizi_data(K, D, sol, plist):
+    # Load Weizi data
+    # wK = np.loadtxt("tst_1D/Netz1D_Matrix_K.dat", dtype=float)
+    # wD = np.loadtxt("tst_1D/Netz1D_D.dat", dtype=float)
+    wSol = np.loadtxt("tst_1D/Netz1D_LoesungA.dat", dtype=float)
+
+    # Compare K
+    plt.figure(figsize=(12, 5))
+    plt.plot(
+        plist, np.abs(wSol - sol), marker="o", linestyle="", label="Difference in Solution"
+    )
+    plt.xlabel("Punkte")
+    plt.ylabel("Differenz")
+    plt.title("Validierung mit Weizi Data")
+    plt.legend()
+    plt.grid()
+
+
 # -------------------------------------------------------------------------------- Main Code --------------------------------------------------------------------------------
 
 
 def main():
     # ----------- Print Randbedingungen -----------
-    if dD:
-        print("Dirichlet-Randbedingungen:")
-        for i in range(len(xD)):
-            print(f"\tphi({xD[i]}) = {dD[i]}")
-
-    if dR:
-        print("Robin-Randbedingungen:\n")
-        for i in range(len(xR)):
-            print(f"\tgamma({xR[i]}) = {dR[i][0]}, q({xR[i]}) = {dR[i][1]}")
+    print_RB()
 
     # ----------- Erstellung P-Liste, T-Liste, Randelemente -----------
-    plist = np.array([1.75, 2, 1.25, 1.0, 1.5])
+    # plist = np.array([1.75, 2, 1.25, 1.0, 1.5])
+    plist = np.loadtxt("tst_1D/Netz1D_p.dat", dtype=float)
+    start_time = time.time()
     tlist = gen_tlist(plist)
+    end_time = time.time()
+    print(f"Time taken to generate tlist: {end_time - start_time:.6f} seconds")
     randelemente = gen_randwerte_liste(plist)
     # print("Punkte (plist):\n", plist)
     # print("T-Liste (tlist):\n", tlist)
-    # print("randwerte:", randwerte)
-    # table = gen_table(tlist, plist)
-
-    # pd.set_option("display.max_columns", None)
-    # pd.set_option("display.width", 1000)
-    # pd.set_option("display.precision", 6)  # Controls decimal places
-    # print('-' * 100)
-    # print(table.to_string(index=False))
-    # print('-' * 100)
+    print("randelemente:", randelemente)
 
     # ----------- Berechnung der notwendigen Daten für die Matrix -----------
+    start_time = time.time()
     K11, K12, D1 = gen_necessary_data(tlist, plist)
+    end_time = time.time()
+    print(f"Time taken to generate necessary data: {end_time - start_time:.6f} seconds")
     K11 = np.array(K11)
     K12 = np.array(K12)
     D1 = np.array(D1)
 
     # ----------- Sortieren der Daten in die Matrix -----------
+    start_time = time.time()
     K, D = sort_into_matrix(plist, tlist, K11, K12, D1)
 
     # ----------- Anwendung der Randbedingungen -----------
     K, D = apply_robin_boundary_conditions(K, D, randelemente, plist)
     K, D = apply_dirichlet_boundary_conditions(K, D, randelemente, plist)
+    end_time = time.time()
+    print(
+        f"Time taken to sort into matrix and apply boundary conditions: {end_time - start_time:.6f} seconds"
+    )
     # K, D = alt_apply_dirichlet_boundary_conditions(K, D, randelemente, plist)
 
     # print("K Matrix:\n", K)
@@ -287,24 +349,27 @@ def main():
 
     # ----------- Lösen des LGS -----------
     # convert K to sparse matrix
+    start_time = time.time()
     K = sp.csr_matrix(K)
     # solve LGS
     sol = sp.linalg.spsolve(K, D)  # Note D_sparse here is just D now
+    end_time = time.time()
+    print(f"Time taken to solve the LGS: {end_time - start_time:.6f} seconds")
 
     # ----------- Rekonstruktion der Lösung für alle Punkte in plist -----------
-    sol_phi = reconstruct_sol(sol, plist, randelemente)
+    sol = reconstruct_sol(sol, plist, randelemente)
 
-    print("Lösung des LGS (phi):\n", sol_phi)
+    # ----------- Plotten der Lösung -----------
+    # print("Lösung des LGS (phi):\n", sol)
+    plot_sol(plist, sol)
 
-    # show in scatter plot
-    plt.figure(figsize=(10, 6))
-    plt.scatter(plist, sol_phi, color="blue", label="Lösung (phi)")
-    plt.title("Lösung des LGS (phi) an den Punkten in plist")
-    plt.xlabel("Punkte (plist)")
-    plt.ylabel("Lösung (phi)")
-    plt.grid()
-    plt.legend()
+    # ----------- Validierung mit Weizi Data -----------
+    validate_with_weizi_data(K, D, sol, plist)
+
     plt.show()
+
+
+# ---------------------
 
 
 if __name__ == "__main__":
