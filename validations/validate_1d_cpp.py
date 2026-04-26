@@ -1,25 +1,26 @@
 import sys
-import os
+from os import path
 
 # Get the absolute path to the project root's 'bin' directory and prepend it to the path
-bin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../bin"))
+bin_dir = path.abspath(path.join(path.dirname(__file__), "../bin"))
 sys.path.insert(0, bin_dir)
 
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import cfunc, float64
-from os import path
 
 import fem_cpp
 from src.colors import Colors as colors
 
 current_dir = path.dirname(path.abspath(__file__))
 current_dir = current_dir + "/../validations"
+tst_data_dir = f"{current_dir}/tst_1D"
 
 # ------------------------------------------------------------------------------
+
 ERROR_TOLERANCE = 1e-11
-# ------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
 
 def print_timings(timings, title="TIMING - C++ full_solve()", n_points=None, n_elems=None):
     """
@@ -55,7 +56,7 @@ def print_timings(timings, title="TIMING - C++ full_solve()", n_points=None, n_e
     len_sep = max(max((len(l) for l in lines), default=0), len(tot_str), len(title_str)) + 4
 
     print()
-    print("-" * len_sep)
+    print("=" * len_sep)
     print(f"{title_str:^{len_sep}}")
     print("-" * len_sep)
     for line in lines:
@@ -105,6 +106,7 @@ def visualize_error(plist, error, title="Fehlerverteilung"):
     plt.title(title)
     plt.legend()
 
+
 def visualize_solution(plist, solution, title="Lösung"):
     plt.figure(figsize=(12, 5))
     plt.scatter(plist, solution, color="blue", label="Lösung (phi)")
@@ -112,9 +114,10 @@ def visualize_solution(plist, solution, title="Lösung"):
     plt.ylabel("PHI(x)")
     plt.title(title)
     plt.legend()
+
 # -----------------------------------------------------------------------------
 
-plist = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_p.dat", dtype=float)
+plist = np.loadtxt(f"{tst_data_dir}/Netz1D_p.dat", dtype=float)
 
 
 @cfunc(float64(float64))
@@ -140,7 +143,6 @@ def f(x):
     else:
         return 1 + x
 
-
 # -----------------------------------------------------------------------------
 
 
@@ -164,7 +166,7 @@ def a1_a():
     def q(x):
         return 0.0
 
-    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungA.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{tst_data_dir}/Netz1D_LoesungA.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     error = None
     try:
@@ -185,7 +187,6 @@ def a1_a():
         return
 
 
-
 def a1_b():
     @cfunc(float64(float64))
     def phi(x):
@@ -202,7 +203,7 @@ def a1_b():
     xD = []  # x-koordinaten der dirichlet boundary conditions
     xR = [1.0, 4.0]  # x-koordinaten der robin boundary conditions
 
-    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungB.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{tst_data_dir}/Netz1D_LoesungB.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     error = None
     try:
@@ -221,7 +222,6 @@ def a1_b():
         print(f"Validierung von Lösung B fehlgeschlagen: {e}")
 
 
-
 def a1_c():
     @cfunc(float64(float64))
     def phi(x):
@@ -238,7 +238,7 @@ def a1_c():
     xD = [4.0]  # x-koordinaten der dirichlet boundary conditions
     xR = [1.0]  # x-koordinaten der robin boundary conditions
 
-    sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungC.dat", dtype=float)
+    sol_tst = np.loadtxt(f"{tst_data_dir}/Netz1D_LoesungC.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     error = None
 
@@ -250,14 +250,13 @@ def a1_c():
     except Exception as e:
         print(f"Fehler bei der Berechnung von Lösung C: {e}")
         return
-    
+
     try:
         error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung C", ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung C")
         visualize_error(plist, error, "Fehlerverteilung für Lösung C")
     except RuntimeError as e:
         print(f"Validierung von Lösung C fehlgeschlagen: {e}")
-
 
 
 def main():
