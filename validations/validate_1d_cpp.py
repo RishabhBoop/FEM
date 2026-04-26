@@ -2,7 +2,7 @@ import sys
 import os
 
 # Get the absolute path to the project root's 'bin' directory and prepend it to the path
-bin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../bin'))
+bin_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../bin"))
 sys.path.insert(0, bin_dir)
 
 import numpy as np
@@ -14,8 +14,14 @@ from numba import cfunc, float64
 from os import path
 
 current_dir = path.dirname(path.abspath(__file__))
+current_dir = current_dir + "/../validations"
+
+# -----------------------------------------------------------------------------
 
 plist = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_p.dat", dtype=float)
+
+ERROR_TOLERANCE = 10e-11
+
 
 @cfunc(float64(float64))
 def alpha(x):
@@ -26,15 +32,14 @@ def alpha(x):
 
 
 @cfunc(float64(float64))
-
 def beta(x):
     if 1 <= x <= 2:
         return x / (1 + x)
     else:
         return x**2
 
-@cfunc(float64(float64))
 
+@cfunc(float64(float64))
 def f(x):
     if 2 <= x <= 4:
         return x
@@ -64,8 +69,26 @@ def a1_a():
 
     sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungA.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
-    fem_solver.full_solve(title="Lösung A")
-    # fem_solver.validate_sol(sol_tst, title="Lösung A")
+    error = None
+    try:
+        fem_solver.full_solve()
+    except Exception as e:
+        print(f"Fehler bei der Berechnung von Lösung A: {e}")
+        return
+
+    try:
+        error = fem_solver.validate_sol(sol_tst, "Lösung A", ERROR_TOLERANCE)
+    except RuntimeError as e:
+        print(f"Validierung von Lösung A fehlgeschlagen: {e}")
+        return
+    if error is not None:
+        plt.figure()
+        plt.plot(plist, error, label="Fehler")
+        plt.xlabel("x")
+        plt.ylabel("Fehler")
+        plt.title("Fehlerverteilung für Lösung A")
+        plt.legend()
+        plt.grid()
 
 
 def a1_b():
@@ -86,11 +109,25 @@ def a1_b():
 
     sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungB.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
-    fem_solver.full_solve(title="Lösung B")
+    error = None
     try:
-        fem_solver.validate_sol(sol_tst, title="Lösung B")
-    except ValueError as e:
+        fem_solver.full_solve()
+    except Exception as e:
+        print(f"Fehler bei der Berechnung von Lösung B: {e}")
+        return
+    try:
+        error = fem_solver.validate_sol(sol_tst, "Lösung B", ERROR_TOLERANCE)
+    except RuntimeError as e:
         print(f"Validierung von Lösung B fehlgeschlagen: {e}")
+
+    if error is not None:
+        plt.figure()
+        plt.plot(plist, error, label="Fehler")
+        plt.xlabel("x")
+        plt.ylabel("Fehler")
+        plt.title("Fehlerverteilung für Lösung B")
+        plt.legend()
+        plt.grid()
 
 
 def a1_c():
@@ -111,8 +148,26 @@ def a1_c():
 
     sol_tst = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_LoesungC.dat", dtype=float)
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
-    fem_solver.full_solve(title="Lösung C")
-    fem_solver.validate_sol(sol_tst, title="Lösung C")
+    error = None
+
+    try:
+        fem_solver.full_solve()
+    except Exception as e:
+        print(f"Fehler bei der Berechnung von Lösung C: {e}")
+        return
+    try:
+        error = fem_solver.validate_sol(sol_tst, "Lösung C", ERROR_TOLERANCE)
+    except RuntimeError as e:
+        print(f"Validierung von Lösung C fehlgeschlagen: {e}")
+
+    if error is not None:
+        plt.figure()
+        plt.plot(plist, error, label="Fehler")
+        plt.xlabel("x")
+        plt.ylabel("Fehler")
+        plt.title("Fehlerverteilung für Lösung C")
+        plt.legend()
+        plt.grid()
 
 
 def main():
