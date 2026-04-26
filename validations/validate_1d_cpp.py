@@ -170,7 +170,7 @@ def a1_a():
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     error = None
     try:
-        timings = fem_solver.full_solve("Lösung A")
+        timings = fem_solver.full_solve()
         sol = fem_solver.get_Solution()
         visualize_solution(plist, sol, "Lösung A")
         print_timings(timings, "TIMING - Lösung A", len(plist), len(plist) - 1)
@@ -179,7 +179,7 @@ def a1_a():
         return
 
     try:
-        error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung A", ERROR_TOLERANCE)
+        error, error_stats = fem_solver.validate_sol(sol_tst, ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung A")
         visualize_error(plist, error, "Fehlerverteilung für Lösung A")
     except RuntimeError as e:
@@ -207,7 +207,7 @@ def a1_b():
     fem_solver = fem_cpp.FEM_1D(xD, xR, plist, alpha, beta, f, phi, gamma, q)
     error = None
     try:
-        timings = fem_solver.full_solve("Lösung B")
+        timings = fem_solver.full_solve()
         sol = fem_solver.get_Solution()
         visualize_solution(plist, sol, "Lösung B")
         print_timings(timings, "TIMING - Lösung B", len(plist), len(plist) - 1)
@@ -215,7 +215,7 @@ def a1_b():
         print(f"Fehler bei der Berechnung von Lösung B: {e}")
         return
     try:
-        error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung B", ERROR_TOLERANCE)
+        error, error_stats = fem_solver.validate_sol(sol_tst, ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung B")
         visualize_error(plist, error, "Fehlerverteilung für Lösung B")
     except RuntimeError as e:
@@ -243,7 +243,7 @@ def a1_c():
     error = None
 
     try:
-        timings = fem_solver.full_solve("Lösung C")
+        timings = fem_solver.full_solve()
         sol = fem_solver.get_Solution()
         visualize_solution(plist, sol, "Lösung C")
         print_timings(timings, "TIMING - Lösung C", len(plist), len(plist) - 1)
@@ -252,7 +252,7 @@ def a1_c():
         return
 
     try:
-        error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung C", ERROR_TOLERANCE)
+        error, error_stats = fem_solver.validate_sol(sol_tst, ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung C")
         visualize_error(plist, error, "Fehlerverteilung für Lösung C")
     except RuntimeError as e:

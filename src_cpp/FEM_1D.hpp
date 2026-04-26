@@ -62,13 +62,13 @@ public:
 
     void reconstruct_solution();
 
-    vector<tuple<string, double>> full_solve(string title = "");
+    vector<tuple<string, double>> full_solve();
 
     void print_solution();
 
     Vector get_Solution();
 
-    tuple<Vector, vector<double>> validate_sol(Vector, string, double);
+    tuple<Vector, vector<double>> validate_sol(Vector, double);
 
     ~FEM_1D() = default;
 };

@@ -220,7 +220,7 @@ void FEM_1D::print_solution()
     cout << ")" << endl;
 }
 
-vector<tuple<string, double>> FEM_1D::full_solve(string title)
+vector<tuple<string, double>> FEM_1D::full_solve()
 {
     auto t0 = chrono::high_resolution_clock::now();
 
@@ -263,7 +263,7 @@ Vector FEM_1D::get_Solution()
     return Sol;
 }
 
-tuple<Vector, vector<double>> FEM_1D::validate_sol(Vector sol_tst, string title, double max_error)
+tuple<Vector, vector<double>> FEM_1D::validate_sol(Vector sol_tst, double max_error)
 {
     if (Sol.size() != sol_tst.size())
     {
