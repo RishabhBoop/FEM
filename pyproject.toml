@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "scikit-build-core", "pybind11"]
+requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -13,9 +13,8 @@ dependencies = [
     "numba"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*", "bin*"]
+[tool.scikit-build]
+wheel.packages = ["src"]
 
 [tool.black]
 line-length = 120
