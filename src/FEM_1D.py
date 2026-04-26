@@ -257,35 +257,28 @@ class fem_1d:
 
         t_total = time.time() - t0
 
-        t_gen_str = f"T-List generierung:              {t_gen_tlist:.6f} s"
-        k_gen_str = f"K11, K12, D1 Matrix generierung: {t_gen_data:.6f} s"
-        sort_str = f"Einsortieren in Matrix:          {t_sort:.6f} s"
-        rob_str = f"Robin-Randwert anwenden:         {t_robin:.6f} s"
-        dir_str = f"Dirichlet-Randwert anwenden:     {t_dirich:.6f} s"
-        sol_str = f"Sparse-Matrix lösen:             {t_solve:.6f} s"
-        rec_str = f"Lösung rekonstruieren:           {t_recon:.6f} s"
-        tot_str = f"=> TOTAL (excl. visualization):  {t_total:.6f} s"
+        t_gen_str  = f"T-List generierung:              {t_gen_tlist*1000:.3f} ms"
+        k_gen_str  = f"K11, K12, D1 Matrix generierung: {t_gen_data*1000:.3f} ms"
+        sort_str   = f"Einsortieren in Matrix:          {t_sort*1000:.3f} ms"
+        rob_str    = f"Robin-Randwert anwenden:         {t_robin*1000:.3f} ms"
+        dir_str    = f"Dirichlet-Randwert anwenden:     {t_dirich*1000:.3f} ms"
+        sol_str    = f"Sparse-Matrix lösen:             {t_solve*1000:.3f} ms"
+        rec_str    = f"Lösung rekonstruieren:           {t_recon*1000:.3f} ms"
+        tot_str    = f"Total Time:                      {t_total*1000:.3f} ms"
 
-        lines = [
-            t_gen_str,
-            k_gen_str,
-            sort_str,
-            rob_str,
-            dir_str,
-            sol_str,
-            rec_str,
-        ]
-        len_sep = max(max(len(l) for l in lines), len(tot_str)) + 4
-        title_str = f"{title} - Speed ({len(self.plist)} Punkte, {len(self.tlist)} Elemente):"
-        len_sep = max(len_sep, len(title_str) + 4)
+        lines = [t_gen_str, k_gen_str, sort_str, rob_str, dir_str, sol_str, rec_str]
 
-        print("\n" + "=" * len_sep)
-        print(f"  {title_str}")
+        title_str = f"TIMING - full_solve()  ({len(self.plist)} Punkte, {len(self.tlist)} Elemente)"
+        len_sep   = max(max(len(l) for l in lines + [tot_str]), len(title_str)) + 4
+
+        print()
+        print("-" * len_sep)
+        print(f"{title_str:^{len_sep}}")
         print("-" * len_sep)
         for line in lines:
-            print(f"  {line}")
+            print(f" {line}")
         print("-" * len_sep)
-        print(f"  {tot_str}")
+        print(f" {tot_str}")
         print("=" * len_sep)
 
         self.visualize_solution()

@@ -33,7 +33,7 @@ vector<int> gen_Randelemente(Vector xR, Vector plist)
         {
             if (abs(plist[i] - xR[j]) < 1e-10)
             {
-                randelemente.push_back(i);  // store node index
+                randelemente.push_back(i); // store node index
                 break;
             }
         }
@@ -144,7 +144,7 @@ void FEM_1D::assemble_matrix(vector<double> K11, vector<double> K12, vector<doub
     for (int node_idx : Randelemente)
     {
         int m_row = node_to_matrix[node_idx];
-        
+
         // Check: Is it a free node AND is it actually in the Robin list?
         if (m_row != -1 && find(xR.begin(), xR.end(), plist[node_idx]) != xR.end())
         {
@@ -220,7 +220,7 @@ void FEM_1D::print_solution()
     cout << ")" << endl;
 }
 
-void FEM_1D::full_solve()
+vector<tuple<string, double>> FEM_1D::full_solve(string title)
 {
     auto t0 = chrono::high_resolution_clock::now();
 
@@ -246,17 +246,15 @@ void FEM_1D::full_solve()
 
     auto t_total = chrono::duration<double, std::milli>(t5 - t0).count();
 
-    cout << "------------------------------------------" << endl;
-    cout << "           TIMING - full_solve()          " << endl;
-    cout << "------------------------------------------" << endl;
-    cout << " T-List generation:       " << t_gen_tlist << " ms" << endl;
-    cout << " K11, K12, D1 generation: " << t_gen_K11_K12_D1 << " ms" << endl;
-    cout << " Matrix Assembly:         " << t_assemble_matrix << " ms" << endl;
-    cout << " LGS Solving:             " << t_solve_LGS << " ms" << endl;
-    cout << " Solution Reconstruction: " << t_reconstruct_solution << " ms" << endl;
-    cout << "------------------------------------------" << endl;
-    cout << " Total Time:              " << t_total << " ms" << endl;
-    cout << "==========================================" << endl;
+    vector<tuple<string, double>> timings = {
+        {"gen_tlist", t_gen_tlist},
+        {"gen_K11_K12_D1", t_gen_K11_K12_D1},
+        {"assemble_matrix", t_assemble_matrix},
+        {"solve_LGS", t_solve_LGS},
+        {"reconstruct_solution", t_reconstruct_solution},
+        {"total_time", t_total}};
+
+    return timings;
 }
 
 Vector FEM_1D::get_Solution()
@@ -265,7 +263,7 @@ Vector FEM_1D::get_Solution()
     return Sol;
 }
 
-Vector FEM_1D::validate_sol(Vector sol_tst, string title, double max_error)
+tuple<Vector, vector<double>> FEM_1D::validate_sol(Vector sol_tst, string title, double max_error)
 {
     if (Sol.size() != sol_tst.size())
     {
@@ -278,23 +276,10 @@ Vector FEM_1D::validate_sol(Vector sol_tst, string title, double max_error)
     double min_abs_error = error.minCoeff();
     double mean_abs_error = error.mean();
 
-    cout << "------------------------------------------" << endl;
-    cout << "       VALIDATION RESULTS (" << title << ") " << endl;
-    cout << "------------------------------------------" << endl;
-    cout << " Max Absolute Error:  " << max_abs_error << endl;
-    cout << " Min Absolute Error:  " << min_abs_error << endl;
-    cout << " Mean Absolute Error: " << mean_abs_error << endl;
-    cout << "------------------------------------------" << endl;
-    if (max_abs_error > max_error)
-    {
-        cout << BOLDRED << " [FAIL] Max error exceeds threshold of " << max_error << RESET << endl;
-    }
-    else
-    {
-        cout << BOLDGREEN << " [PASS] Max error is within " << max_error << " of actual solution" << RESET << endl;
-    }
-    cout << "==========================================" << endl
-         << endl;
+    // string suc = format("=> [PASS] Max error is within {:.2e} of actual solution", max_error);
+    // string fail = format("=> [FAIL] Max error exceeds threshold of {:.2e} of actual solution", max_error);
 
-    return error;
+    vector<double> error_stats = {max_abs_error, min_abs_error, mean_abs_error};
+
+    return {error, error_stats};
 }
