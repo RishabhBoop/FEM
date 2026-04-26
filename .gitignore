@@ -6,3 +6,11 @@
 *.zip
 __pycache__/
 fem_project.egg-info/
+venv/
+
+# C++ build files
+build/
+bin/
+
+# vscode settings
+.vscode/
