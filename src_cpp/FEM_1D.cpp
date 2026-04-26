@@ -266,3 +266,9 @@ void FEM_1D::full_solve()
     cout << " Total full_solve() Time: " << t_total << " ms" << endl;
 }
 
+
+Vector FEM_1D::get_Solution()
+{
+    // Return Sol for pybind11
+    return Sol;
+}

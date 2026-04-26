@@ -66,6 +66,8 @@ public:
 
     void print_solution();
 
+    Vector get_Solution();
+
     ~FEM_1D() = default;
 };
 
