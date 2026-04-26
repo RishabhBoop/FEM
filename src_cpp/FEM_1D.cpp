@@ -140,32 +140,19 @@ void FEM_1D::assemble_matrix(vector<double> K11, vector<double> K12, vector<doub
             }
         }
     }
-    cout << "D before Robin: " << D.transpose() << endl;
     // apply robin Randwert
     for (int node_idx : Randelemente)
     {
         int m_row = node_to_matrix[node_idx];
-
-        double x = plist(node_idx);
-        bool not_dirichlet = (m_row != -1);
-        bool in_xR = find(xR.begin(), xR.end(), x) != xR.end();
-
-        cout << "Randelement node_idx=" << node_idx
-             << " x=" << x
-             << " m_row=" << m_row
-             << " not_dirichlet=" << not_dirichlet
-             << " in_xR=" << in_xR << endl;
-
+        
         // Check: Is it a free node AND is it actually in the Robin list?
         if (m_row != -1 && find(xR.begin(), xR.end(), plist[node_idx]) != xR.end())
         {
             double x = plist(node_idx);
-            cout << "Applying Robin condition at node " << node_idx << " (x=" << x << "): adding " << q(x) << " to D(" << m_row << ") and " << gamma(x) << " to K(" << m_row << "," << m_row << ")" << endl;
             D(m_row) += q(x);
             triplets.emplace_back(m_row, m_row, gamma(x));
         }
     }
-    cout << "D after Robin: " << D.transpose() << endl;
 
     K.resize(free_count, free_count);
     K.setFromTriplets(triplets.begin(), triplets.end());
