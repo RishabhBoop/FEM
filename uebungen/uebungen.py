@@ -14,43 +14,6 @@ from matplotlib.tri import Triangulation
 
 TO_MB = 1024 * 1024
 
-
-# 1 d)
-def generate_t(plist: np.ndarray) -> np.ndarray:
-    tlist_tmp = np.argsort(plist)
-    tmp1 = tlist_tmp[0:-1]
-    tmp2 = tlist_tmp[1:]
-    tlist = np.array(list(zip(tmp1, tmp2)))
-    return tlist
-
-
-def get_teil_Abstand(plist: np.ndarray, tlist: np.ndarray) -> np.ndarray:
-    plist = np.array(plist)
-    plist = plist[plist[:, 0].argsort()]  # Sortiere plist nach den x-Werten
-    abstaende = np.diff(plist[:, 0])
-    return abstaende
-
-
-def gen_mittelpunkte(pList: np.ndarray) -> np.ndarray:
-    # pList = np.array(pList)
-    pList = pList[pList[:, 0].argsort()]
-    mittelpunkte = (pList[:-1, 0] + pList[1:, 0]) / 2
-    return mittelpunkte
-
-
-def area_under_kurve(x, y, abstaende):
-    # rechteck + dreiecksfläche
-    rechteck = np.sum(abstaende * y[:-1])
-    dreiecksfläche = np.sum(abstaende * (y[1:] - y[:-1]) / 2)
-    return rechteck + dreiecksfläche
-
-
-def exaact_area_under_kurve(lim_a, lim_b):
-    part1 = 2 * lim_a * (np.log(lim_a) - 1)
-    part2 = 2 * lim_b * (np.log(lim_b) - 1)
-    return part2 - part1
-
-
 # --------------------------------------------------
 
 
@@ -74,6 +37,41 @@ class Aufgabe1:
     def func(self, x):
         # f(x) = ln(x^2)
         return 2 * np.log(x)
+
+    @staticmethod
+    def generate_t(plist: np.ndarray) -> np.ndarray:
+        tlist_tmp = np.argsort(plist)
+        tmp1 = tlist_tmp[0:-1]
+        tmp2 = tlist_tmp[1:]
+        tlist = np.array(list(zip(tmp1, tmp2)))
+        return tlist
+
+    @staticmethod
+    def get_teil_Abstand(plist: np.ndarray, tlist: np.ndarray) -> np.ndarray:
+        plist = np.array(plist)
+        plist = plist[plist[:, 0].argsort()]  # Sortiere plist nach den x-Werten
+        abstaende = np.diff(plist[:, 0])
+        return abstaende
+
+    @staticmethod
+    def gen_mittelpunkte(pList: np.ndarray) -> np.ndarray:
+        # pList = np.array(pList)
+        pList = pList[pList[:, 0].argsort()]
+        mittelpunkte = (pList[:-1, 0] + pList[1:, 0]) / 2
+        return mittelpunkte
+
+    @staticmethod
+    def area_under_kurve(x, y, abstaende):
+        # rechteck + dreiecksfläche
+        rechteck = np.sum(abstaende * y[:-1])
+        dreiecksfläche = np.sum(abstaende * (y[1:] - y[:-1]) / 2)
+        return rechteck + dreiecksfläche
+
+    @staticmethod
+    def exaact_area_under_kurve(lim_a, lim_b):
+        part1 = 2 * lim_a * (np.log(lim_a) - 1)
+        part2 = 2 * lim_b * (np.log(lim_b) - 1)
+        return part2 - part1
 
     def aufgabe_a(self):
         print("------------ a) ------------")
@@ -108,24 +106,24 @@ class Aufgabe1:
 
         # --- p0 ---
         print("--- p0 ---")
-        self.t0 = generate_t(self.p0)
-        abstaende_p0 = get_teil_Abstand(self.p0, self.t0)
+        self.t0 = self.generate_t(self.p0)
+        abstaende_p0 = self.get_teil_Abstand(self.p0, self.t0)
         print(f"Maximaler Abstand p0: {np.max(abstaende_p0):.4f}")
         print(f"Minimaler Abstand p0: {np.min(abstaende_p0):.4f}")
         print(f"Mittlerer Abstand p0: {np.mean(abstaende_p0):.4f}")
 
         # --- p1 ---
         print("--- p1 ---")
-        self.t1 = generate_t(self.p1)
-        abstaende_p1 = get_teil_Abstand(self.p1, self.t1)
+        self.t1 = self.generate_t(self.p1)
+        abstaende_p1 = self.get_teil_Abstand(self.p1, self.t1)
         print(f"Maximaler Abstand p1: {np.max(abstaende_p1):.4f}")
         print(f"Minimaler Abstand p1: {np.min(abstaende_p1):.4f}")
         print(f"Mittlerer Abstand p1: {np.mean(abstaende_p1):.4f}")
 
         # --- p2 ---
         print("--- p2 ---")
-        self.t2 = generate_t(self.p2)
-        abstaende_p2 = get_teil_Abstand(self.p2, self.t2)
+        self.t2 = self.generate_t(self.p2)
+        abstaende_p2 = self.get_teil_Abstand(self.p2, self.t2)
         print(f"Maximaler Abstand p2: {np.max(abstaende_p2):.4f}")
         print(f"Minimaler Abstand p2: {np.min(abstaende_p2):.4f}")
         print(f"Mittlerer Abstand p2: {np.mean(abstaende_p2):.4f}")
@@ -137,10 +135,8 @@ class Aufgabe1:
         Np0_1 = np.arange(N_large)
         Np0 = np.column_stack((Np0_0, Np0_1))
 
-        Nt0 = generate_t(Np0)
-        abstaende_large = get_teil_Abstand(
-            Np0, Nt0
-        )  # Bug fixed: Used Nt0 instead of t0
+        Nt0 = self.generate_t(Np0)
+        abstaende_large = self.get_teil_Abstand(Np0, Nt0)  # Bug fixed: Used Nt0 instead of t0
 
         print(f"Maximaler Abstand p0 (100k): {np.max(abstaende_large):.4f}")
         print(f"Minimaler Abstand p0 (100k): {np.min(abstaende_large):.4f}")
@@ -161,7 +157,7 @@ class Aufgabe1:
         self.newP2 = self.p2[~cond_to_remove]
         print("new p2:\n", self.newP2)
 
-        self.newT2 = generate_t(self.newP2)
+        self.newT2 = self.generate_t(self.newP2)
         print("new t2:\n", self.newT2)
 
     def aufgabe_f(self):
@@ -176,9 +172,7 @@ class Aufgabe1:
         plt.figure(figsize=(10, 6))
         plt.scatter(self.p0[:, 0], self.y_p0, label="p0", marker="o", linewidths=0.3)
         plt.scatter(self.p1[:, 0], self.y_p1, label="p1", marker="o", linewidths=0.3)
-        plt.scatter(
-            self.newP2[:, 0], self.y_newP2, label="new p2", marker="o", linewidths=0.3
-        )
+        plt.scatter(self.newP2[:, 0], self.y_newP2, label="new p2", marker="o", linewidths=0.3)
 
         plt.title("Auswertung der Funktion an verschiedenen Knotenpunkten")
         plt.xlabel("x")
@@ -191,19 +185,19 @@ class Aufgabe1:
         if not hasattr(self, "y_p0"):
             self.aufgabe_f()
 
-        abstaende_p0 = get_teil_Abstand(self.p0, self.t0)
-        abstaende_p1 = get_teil_Abstand(self.p1, self.t1)
-        abstaende_p2 = get_teil_Abstand(self.newP2, self.newT2)
+        abstaende_p0 = self.get_teil_Abstand(self.p0, self.t0)
+        abstaende_p1 = self.get_teil_Abstand(self.p1, self.t1)
+        abstaende_p2 = self.get_teil_Abstand(self.newP2, self.newT2)
 
-        area_p0 = area_under_kurve(self.p0[:, 0], self.y_p0, abstaende_p0)
-        area_p1 = area_under_kurve(self.p1[:, 0], self.y_p1, abstaende_p1)
-        area_p2 = area_under_kurve(self.newP2[:, 0], self.y_newP2, abstaende_p2)
+        area_p0 = self.area_under_kurve(self.p0[:, 0], self.y_p0, abstaende_p0)
+        area_p1 = self.area_under_kurve(self.p1[:, 0], self.y_p1, abstaende_p1)
+        area_p2 = self.area_under_kurve(self.newP2[:, 0], self.y_newP2, abstaende_p2)
 
         print(f"Fläche unter der Kurve für p0 (N={self.N}): {area_p0:.4f}")
         print(f"Fläche unter der Kurve für p1 (N={self.N}): {area_p1:.4f}")
         print(f"Fläche unter der Kurve für p2 (N={self.N}): {area_p2:.4f}")
 
-        exact_area = exaact_area_under_kurve(self.a, self.b)
+        exact_area = self.exaact_area_under_kurve(self.a, self.b)
         print(f"Exakte Fläche unter der Kurve: {exact_area:.4f}")
 
     def execute_aufgabe(self, aufgabe=[]):
@@ -386,9 +380,7 @@ class Aufgabe2:
             end_time = time.time()
 
             time_taken = end_time - start_time
-            arr_Size = (
-                matrA.data.nbytes + matrA.indices.nbytes + matrA.indptr.nbytes
-            ) / TO_MB
+            arr_Size = (matrA.data.nbytes + matrA.indices.nbytes + matrA.indptr.nbytes) / TO_MB
             print(f"Zeit für N = {i}: {time_taken:.4f} Sekunden")
             print(f"Memory für N = {i}: {arr_Size:.4f} MB")
             self.times_sparse[i] = time_taken
@@ -642,13 +634,9 @@ class Aufgabe3:
                 p3 = p1 + N0
                 p4 = p3 + 1
                 triangles += [[p1, p2, p3], [p2, p4, p3]]
-                plt.triplot(
-                    points[:, 0], points[:, 1], [[p1, p2, p3]], marker="o", color="red"
-                )
+                plt.triplot(points[:, 0], points[:, 1], [[p1, p2, p3]], marker="o", color="red")
                 plt.pause(interval=0.2)
-                plt.triplot(
-                    points[:, 0], points[:, 1], [[p2, p4, p3]], marker="o", color="red"
-                )
+                plt.triplot(points[:, 0], points[:, 1], [[p2, p4, p3]], marker="o", color="red")
                 plt.pause(interval=0.2)
 
         triangles = np.array(triangles)
@@ -681,8 +669,8 @@ class Aufgabe3:
         t = tri.simplices
         p = 1.0 * points
 
-        print("p-Liste: ",p)
-        print("t-Liste: ",t)
+        print("p-Liste: ", p)
+        print("t-Liste: ", t)
 
         plt.figure(figsize=(10, 6))
 
@@ -701,11 +689,11 @@ class Aufgabe3:
         print("------------ c) ------------")
         # liste mit allen Kanten e
         # create each edge from tlist
-        all_edges = np.vstack([self.tlist[:, [0,1]], self.tlist[:, [1,2]], self.tlist[:, [2,0]]])
+        all_edges = np.vstack([self.tlist[:, [0, 1]], self.tlist[:, [1, 2]], self.tlist[:, [2, 0]]])
 
         # sort each edge from smaller to bigger index ([20, 32] and [32, 20] should be the same edge)
         all_edges = np.sort(all_edges, axis=1)
-        
+
         # filter out duplicate edges
         e, inverse, count = np.unique(all_edges, axis=0, return_inverse=True, return_counts=True)
         r = []
@@ -714,11 +702,11 @@ class Aufgabe3:
         boundary_indices_in_e = np.where(count == 1)[0]
         r = e[boundary_indices_in_e]
         for idx in boundary_indices_in_e:
-            raw_idx = np.where(inverse == idx)[0][0] # index in all_edges that corresponds to the edge e[idx]
+            raw_idx = np.where(inverse == idx)[0][0]  # index in all_edges that corresponds to the edge e[idx]
 
             tri_idx = raw_idx % len(self.tlist)
             rt.append(self.tlist[tri_idx])
-            
+
             # print(f"Randkante: {e[idx]}, zugehöriges Dreieck: {self.tlist[tri_idx]}")
 
         self.e = e
@@ -726,11 +714,10 @@ class Aufgabe3:
         rt = np.unique(rt, axis=0)
         self.rt = rt
 
-
-        plt.triplot(self.plist[:,0], self.plist[:,1], self.tlist)
+        plt.triplot(self.plist[:, 0], self.plist[:, 1], self.tlist)
 
         for i, (x, y) in enumerate(self.plist):
-            plt.text(x + 0.05, y + 0.05, str(i), color='red', fontsize=12, ha='center', va='center')
+            plt.text(x + 0.05, y + 0.05, str(i), color="red", fontsize=12, ha="center", va="center")
 
         print("Alle Kanten e:\n", self.e)
         print("Randkanten r:\n", self.r)
@@ -738,7 +725,7 @@ class Aufgabe3:
 
     @staticmethod
     def f(x, y):
-        return x/(x**2+y**2)
+        return x / (x**2 + y**2)
 
     def aufgabe_d(self):
         if self.tlist is None or self.plist is None:
@@ -749,6 +736,11 @@ class Aufgabe3:
         print("------------ d) ------------")
         func_val = np.array([self.f(x, y) for x, y in self.plist])
         print(func_val)
+
+        fig = plt.figure(figsize=(10, 6))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_trisurf(self.plist[:, 0], self.plist[:, 1], func_val, triangles=self.tlist, cmap='viridis', edgecolor='none')
+
         plt.figure(figsize=(10, 6))
         tri = Triangulation(self.plist[:, 0], self.plist[:, 1], self.tlist)
         plt.tricontourf(tri, func_val, cmap="viridis")
@@ -760,7 +752,7 @@ class Aufgabe3:
         # Berechnet den Schwerpunkt eines Dreiecks gegeben durch die Indizes der Punkte
         p1, p2, p3 = self.plist[triangle]
         return (p1 + p2 + p3) / 3
-    
+
     def aufgabe_e(self):
         print("------------ e) ------------")
         if self.tlist is None or self.plist is None:
@@ -786,10 +778,11 @@ class Aufgabe3:
 
             # check if the schwerpunkt is in the upper right corner
             if sp[0] > x_mid and sp[1] > y_mid:
-                plt.plot(sp[0], sp[1], marker='x', color='red')
+                plt.plot(sp[0], sp[1], marker="x", color="red")
 
     def aufgabe_f(self):
         print("------------ f) ------------")
+        # ------------------------------------- ohne Kreis -------------------------------------
         # Anfangs und Endpunkt
         y0 = 1
         yN = 5
@@ -811,23 +804,36 @@ class Aufgabe3:
         # Nummeriere und lege Elemente fest
         tri = Delaunay(points)
 
-        # entnehme p und t-Liste
         t = tri.simplices
         p = 1.0 * points
 
-        print("p-Liste: ",p)
-        print("t-Liste: ",t)
-
         plt.figure(figsize=(10, 6))
-
-        # Male die Dreiecke
         plt.triplot(p[:, 0], p[:, 1], t)
-
-        # male Kreise an den Positionen
         plt.plot(p[:, 0], p[:, 1], "x")
 
         self.tlist = t
         self.plist = p
+
+
+        # ------------------------------------- mit Kreis -------------------------------------
+        x0 = -1
+        xN = 2
+        y0 = 1
+        yN = 5
+        N0 = 200
+
+        # cut circle out
+        radius = 0.5
+        center = np.array([0.5, 3])
+        # (x - center_x)² + (y - center_y)² = r²
+        mask = (p[:, 0] - center[0]) ** 2 + (p[:, 1] - center[1]) ** 2 > radius**2
+        self.plist =  self.plist[mask]
+        tri = Delaunay(self.plist)
+        self.tlist = tri.simplices
+
+        plt.figure(figsize=(10, 6))
+        plt.triplot(self.plist[:, 0], self.plist[:, 1], self.tlist)
+        plt.plot(self.plist[:, 0], self.plist[:, 1], "x")
 
     def execute_aufgabe(self, aufgabe=[]):
         aufgaben = {
@@ -836,7 +842,7 @@ class Aufgabe3:
             # "c": self.aufgabe_c,
             # 'd': self.aufgabe_d,
             # 'e': self.aufgabe_e,
-            'f': self.aufgabe_f,
+            "f": self.aufgabe_f,
         }
         to_execute = aufgabe if aufgabe else aufgaben.keys()
 
@@ -851,7 +857,7 @@ class Aufgabe3:
 
 if __name__ == "__main__":
     # a1 = Aufgabe1()
-    # a1.execute_aufgabe(['g'])
+    # a1.execute_aufgabe()
 
     # a2 = Aufgabe2()
     # a2.execute_aufgabe()
