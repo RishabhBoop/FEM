@@ -21,32 +21,23 @@ FEM_1D::FEM_1D(
                                   gamma(gamma),
                                   q(q)
 {
-    this->Randelemente = gen_Randelemente(xD, xR, plist);
+    this->Randelemente = gen_Randelemente(xR, plist);
 }
 
-Vector gen_Randelemente(Vector xD, Vector xR, Vector plist)
+vector<int> gen_Randelemente(Vector xR, Vector plist)
 {
-    // concat xD and xR
-    Vector Vecs(xD.size() + xR.size());
-    Vecs << xD, xR;
-
-    // Create a temporary vector to store the boundary elements
-    vector<double> tmp_Randelems;
-
-    // check for matching coordinates in xD+xR
-    for (double x : Vecs)
+    vector<int> randelemente;
+    for (int j = 0; j < xR.size(); ++j)
     {
-        for (double p : plist)
+        for (int i = 0; i < plist.size(); ++i)
         {
-            if (x == p)
+            if (abs(plist[i] - xR[j]) < 1e-10)
             {
-                tmp_Randelems.push_back(x);
+                randelemente.push_back(i);  // store node index
                 break;
             }
         }
     }
-
-    Vector randelemente = Vector::Map(tmp_Randelems.data(), tmp_Randelems.size());
     return randelemente;
 }
 
@@ -111,7 +102,7 @@ void FEM_1D::assemble_matrix(vector<double> K11, vector<double> K12, vector<doub
         }
     }
 
-    D = Vector::Zero(free_count); // Initialize D vector with correct size and zeroes
+    D = Vector::Zero(free_count);            // Initialize D vector with correct size and zeroes
     vector<Eigen::Triplet<double>> triplets; // {row, col, value} for sparse matrix assembly
 
     for (int i = 0; i < tlist.rows(); ++i)
@@ -148,25 +139,36 @@ void FEM_1D::assemble_matrix(vector<double> K11, vector<double> K12, vector<doub
                 }
             }
         }
-
-        // apply robin Randwert
-        for (int node_idx : Randelemente)
-        {
-            int m_row = node_to_matrix[node_idx];
-
-            // If it's a free node and it's in the Robin list (xR)
-            if (m_row != -1 && find(xR.begin(), xR.end(), plist[node_idx]) != xR.end())
-            {
-                double gamma_val = gamma(plist(node_idx));
-                double q_val = q(plist(node_idx));
-
-                D(m_row) += q_val;
-                triplets.emplace_back(m_row, m_row, gamma_val);
-            }
-        }
-        K.resize(free_count, free_count);
-        K.setFromTriplets(triplets.begin(), triplets.end());
     }
+    cout << "D before Robin: " << D.transpose() << endl;
+    // apply robin Randwert
+    for (int node_idx : Randelemente)
+    {
+        int m_row = node_to_matrix[node_idx];
+
+        double x = plist(node_idx);
+        bool not_dirichlet = (m_row != -1);
+        bool in_xR = find(xR.begin(), xR.end(), x) != xR.end();
+
+        cout << "Randelement node_idx=" << node_idx
+             << " x=" << x
+             << " m_row=" << m_row
+             << " not_dirichlet=" << not_dirichlet
+             << " in_xR=" << in_xR << endl;
+
+        // Check: Is it a free node AND is it actually in the Robin list?
+        if (m_row != -1 && find(xR.begin(), xR.end(), plist[node_idx]) != xR.end())
+        {
+            double x = plist(node_idx);
+            cout << "Applying Robin condition at node " << node_idx << " (x=" << x << "): adding " << q(x) << " to D(" << m_row << ") and " << gamma(x) << " to K(" << m_row << "," << m_row << ")" << endl;
+            D(m_row) += q(x);
+            triplets.emplace_back(m_row, m_row, gamma(x));
+        }
+    }
+    cout << "D after Robin: " << D.transpose() << endl;
+
+    K.resize(free_count, free_count);
+    K.setFromTriplets(triplets.begin(), triplets.end());
 }
 
 void FEM_1D::solve_LGS()
@@ -236,7 +238,7 @@ void FEM_1D::full_solve()
     auto t0 = chrono::high_resolution_clock::now();
 
     gen_tlist();
-    auto t1 = chrono::high_resolution_clock::now(); 
+    auto t1 = chrono::high_resolution_clock::now();
     auto t_gen_tlist = chrono::duration<double, std::milli>(t1 - t0).count();
 
     auto [K11, K12, D1] = gen_K11_K12_D1();
@@ -257,18 +259,55 @@ void FEM_1D::full_solve()
 
     auto t_total = chrono::duration<double, std::milli>(t5 - t0).count();
 
-    cout << "Timing of full_solve():" << endl;
-    cout << " T-List generation: " << t_gen_tlist << " ms" << endl;
+    cout << "------------------------------------------" << endl;
+    cout << "           TIMING - full_solve()          " << endl;
+    cout << "------------------------------------------" << endl;
+    cout << " T-List generation:       " << t_gen_tlist << " ms" << endl;
     cout << " K11, K12, D1 generation: " << t_gen_K11_K12_D1 << " ms" << endl;
-    cout << " Matrix Assembly: " << t_assemble_matrix << " ms" << endl;
-    cout << " LGS Solving: " << t_solve_LGS << " ms" << endl;
+    cout << " Matrix Assembly:         " << t_assemble_matrix << " ms" << endl;
+    cout << " LGS Solving:             " << t_solve_LGS << " ms" << endl;
     cout << " Solution Reconstruction: " << t_reconstruct_solution << " ms" << endl;
-    cout << " Total full_solve() Time: " << t_total << " ms" << endl;
+    cout << "------------------------------------------" << endl;
+    cout << " Total Time:              " << t_total << " ms" << endl;
+    cout << "==========================================" << endl;
 }
-
 
 Vector FEM_1D::get_Solution()
 {
     // Return Sol for pybind11
     return Sol;
+}
+
+Vector FEM_1D::validate_sol(Vector sol_tst, string title, double max_error)
+{
+    if (Sol.size() != sol_tst.size())
+    {
+        throw runtime_error("Validation failed: Solution size does not match test solution size.");
+    }
+
+    Vector error = Sol - sol_tst;
+    error = error.cwiseAbs(); // take absolute value of errors
+    double max_abs_error = error.maxCoeff();
+    double min_abs_error = error.minCoeff();
+    double mean_abs_error = error.mean();
+
+    cout << "------------------------------------------" << endl;
+    cout << "       VALIDATION RESULTS (" << title << ") " << endl;
+    cout << "------------------------------------------" << endl;
+    cout << " Max Absolute Error:  " << max_abs_error << endl;
+    cout << " Min Absolute Error:  " << min_abs_error << endl;
+    cout << " Mean Absolute Error: " << mean_abs_error << endl;
+    cout << "------------------------------------------" << endl;
+    if (max_abs_error > max_error)
+    {
+        cout << BOLDRED << " [FAIL] Max error exceeds threshold of " << max_error << RESET << endl;
+    }
+    else
+    {
+        cout << BOLDGREEN << " [PASS] Max error is within " << max_error << " of actual solution" << RESET << endl;
+    }
+    cout << "==========================================" << endl
+         << endl;
+
+    return error;
 }
