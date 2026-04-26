@@ -97,6 +97,21 @@ def print_error_stats(error_stats, title="Validierung", n_elems=None):
     print("=" * len_sep)
 
 
+def visualize_error(plist, error, title="Fehlerverteilung"):
+    plt.figure(figsize=(12, 5))
+    plt.plot(plist, error, marker="o", linestyle="", label="Fehler")
+    plt.xlabel("x")
+    plt.ylabel("Absoluter Fehler")
+    plt.title(title)
+    plt.legend()
+
+def visualize_solution(plist, solution, title="Lösung"):
+    plt.figure(figsize=(12, 5))
+    plt.scatter(plist, solution, color="blue", label="Lösung (phi)")
+    plt.xlabel("x")
+    plt.ylabel("PHI(x)")
+    plt.title(title)
+    plt.legend()
 # -----------------------------------------------------------------------------
 
 plist = np.loadtxt(f"{current_dir}/tst_1D/Netz1D_p.dat", dtype=float)
@@ -154,6 +169,8 @@ def a1_a():
     error = None
     try:
         timings = fem_solver.full_solve("Lösung A")
+        sol = fem_solver.get_Solution()
+        visualize_solution(plist, sol, "Lösung A")
         print_timings(timings, "TIMING - Lösung A", len(plist), len(plist) - 1)
     except Exception as e:
         print(f"Fehler bei der Berechnung von Lösung A: {e}")
@@ -162,9 +179,11 @@ def a1_a():
     try:
         error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung A", ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung A")
+        visualize_error(plist, error, "Fehlerverteilung für Lösung A")
     except RuntimeError as e:
         print(f"Validierung von Lösung A fehlgeschlagen: {e}")
         return
+
 
 
 def a1_b():
@@ -188,6 +207,8 @@ def a1_b():
     error = None
     try:
         timings = fem_solver.full_solve("Lösung B")
+        sol = fem_solver.get_Solution()
+        visualize_solution(plist, sol, "Lösung B")
         print_timings(timings, "TIMING - Lösung B", len(plist), len(plist) - 1)
     except Exception as e:
         print(f"Fehler bei der Berechnung von Lösung B: {e}")
@@ -195,17 +216,10 @@ def a1_b():
     try:
         error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung B", ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung B")
+        visualize_error(plist, error, "Fehlerverteilung für Lösung B")
     except RuntimeError as e:
         print(f"Validierung von Lösung B fehlgeschlagen: {e}")
 
-    # if error is not None:
-    #     plt.figure()
-    #     plt.plot(plist, error, label="Fehler")
-    #     plt.xlabel("x")
-    #     plt.ylabel("Fehler")
-    #     plt.title("Fehlerverteilung für Lösung B")
-    #     plt.legend()
-    #     plt.grid()
 
 
 def a1_c():
@@ -230,25 +244,20 @@ def a1_c():
 
     try:
         timings = fem_solver.full_solve("Lösung C")
+        sol = fem_solver.get_Solution()
+        visualize_solution(plist, sol, "Lösung C")
         print_timings(timings, "TIMING - Lösung C", len(plist), len(plist) - 1)
-
     except Exception as e:
         print(f"Fehler bei der Berechnung von Lösung C: {e}")
         return
+    
     try:
         error, error_stats = fem_solver.validate_sol(sol_tst, "Lösung C", ERROR_TOLERANCE)
         print_error_stats(error_stats, "Lösung C")
+        visualize_error(plist, error, "Fehlerverteilung für Lösung C")
     except RuntimeError as e:
         print(f"Validierung von Lösung C fehlgeschlagen: {e}")
 
-    # if error is not None:
-    #     plt.figure()
-    #     plt.plot(plist, error, label="Fehler")
-    #     plt.xlabel("x")
-    #     plt.ylabel("Fehler")
-    #     plt.title("Fehlerverteilung für Lösung C")
-    #     plt.legend()
-    #     plt.grid()
 
 
 def main():
