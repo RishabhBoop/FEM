@@ -217,102 +217,61 @@ class fem_1d:
         plt.grid()
         plt.legend()
 
-    def full_solve(self, title: str):
+    def full_solve(self):
         """
-        Fully solve the FEM Problem, times each step and prints the performance output.
-        Also visualizes the solution at the end.
-
-        Args:
-            title (string): Title for the performance output
+        Fully solve the FEM Problem and returns the timings of each step.
         """
+        import time
         t0 = time.time()
+        timings = []
 
         t1 = time.time()
         self.gen_tlist()
-        t_gen_tlist = time.time() - t1
+        t_gen_tlist = (time.time() - t1) * 1000.0
+        timings.append(("gen_tlist", t_gen_tlist))
 
         t1 = time.time()
         K11, K12, D1 = self.gen_necessary_data()
-        t_gen_data = time.time() - t1
+        t_gen_data = (time.time() - t1) * 1000.0
+        timings.append(("gen_K11_K12_D1", t_gen_data))
 
         t1 = time.time()
         self.sort_into_matrix(K11, K12, D1)
-        t_sort = time.time() - t1
-
-        t1 = time.time()
         self.apply_robin_boundary_conditions()
-        t_robin = time.time() - t1
-
-        t1 = time.time()
         self.apply_dirichlet_boundary_conditions()
-        t_dirich = time.time() - t1
+        t_assemble = (time.time() - t1) * 1000.0
+        timings.append(("assemble_matrix", t_assemble))
 
         t1 = time.time()
         self.solve_LGS()
-        t_solve = time.time() - t1
+        t_solve = (time.time() - t1) * 1000.0
+        timings.append(("solve_LGS", t_solve))
 
         t1 = time.time()
         self.reconstruct_solution()
-        t_recon = time.time() - t1
+        t_recon = (time.time() - t1) * 1000.0
+        timings.append(("reconstruct_solution", t_recon))
 
-        t_total = time.time() - t0
+        t_total = (time.time() - t0) * 1000.0
+        timings.append(("total_time", t_total))
 
-        t_gen_str  = f"T-List generierung:              {t_gen_tlist*1000:.3f} ms"
-        k_gen_str  = f"K11, K12, D1 Matrix generierung: {t_gen_data*1000:.3f} ms"
-        sort_str   = f"Einsortieren in Matrix:          {t_sort*1000:.3f} ms"
-        rob_str    = f"Robin-Randwert anwenden:         {t_robin*1000:.3f} ms"
-        dir_str    = f"Dirichlet-Randwert anwenden:     {t_dirich*1000:.3f} ms"
-        sol_str    = f"Sparse-Matrix lösen:             {t_solve*1000:.3f} ms"
-        rec_str    = f"Lösung rekonstruieren:           {t_recon*1000:.3f} ms"
-        tot_str    = f"Total Time:                      {t_total*1000:.3f} ms"
+        return timings
 
-        lines = [t_gen_str, k_gen_str, sort_str, rob_str, dir_str, sol_str, rec_str]
+    def get_Solution(self):
+        """Returns the computed solution."""
+        return self.sol
 
-        title_str = f"TIMING - full_solve()  ({len(self.plist)} Punkte, {len(self.tlist)} Elemente)"
-        len_sep   = max(max(len(l) for l in lines + [tot_str]), len(title_str)) + 4
-
-        print()
-        print("-" * len_sep)
-        print(f"{title_str:^{len_sep}}")
-        print("-" * len_sep)
-        for line in lines:
-            print(f" {line}")
-        print("-" * len_sep)
-        print(f" {tot_str}")
-        print("=" * len_sep)
-
-        self.visualize_solution()
-
-    def validate_sol(self, sol_test: np.ndarray, title: str = "Validierung"):
+    def validate_sol(self, sol_test: np.ndarray, error_tolerance: float = 1e-11):
         """
         Validates the computed solution against a provided test solution.
-        Prints the maximum, minimum and mean absolute error between the two solutions and visualizes both the computed solution and the test solution.
-
-
-        Args:
-            sol_test (np.ndarray): numpy array containing the test solution values at the points in the plist
-            title (str, optional): Title for the print and the plot. Defaults to "Validierung".
-
-        Raises:
-            ValueError: If the length of the test solution does not match the length of the computed solution.
         """
         if len(sol_test) != len(self.sol):
-            raise ValueError("Länge der Testlösung stimmt nicht mit berechneter Lösung überein.")
+            raise RuntimeError("Validation failed: Solution size does not match test solution size.")
 
         error = np.abs(sol_test - self.sol)
+        error_stats = (float(np.max(error)), float(np.min(error)), float(np.mean(error)))
 
-        title_str = f"Abweichungen für {title} ({len(self.plist)} Elemente):"
-        max_str = f"Maximale Abweichung: {np.max(error):.6e}"
-        min_str = f"Minimale Abweichung: {np.min(error):.6e}"
-        mean_str = f"Mittlere Abweichung: {np.mean(error):.6e}"
-        len_sep = max(len(max_str), len(min_str), len(mean_str), len(title_str)) + 4
-
-        print("\n" + "=" * len_sep)
-        print(f"  {title_str}")
-        print("-" * len_sep)
-        print(f"  {max_str}")
-        print(f"  {min_str}")
-        print(f"  {mean_str}")
+        return error, error_stats
         print("=" * len_sep)
 
         plt.figure(figsize=(12, 5))
