@@ -21,6 +21,7 @@ PYBIND11_MODULE(fem_cpp, m)
              function<double(double)>,
              function<double(double)>,
              function<double(double)>>())
+            .def_readwrite("RESOLUTION", &FEM_1D::RESOLUTION)
         .def("gen_tlist", &FEM_1D::gen_tlist, "Generate the tlist based on the plist")
         .def("gen_K11_K12_D1", &FEM_1D::gen_K11_K12_D1, "Generate the K11, K12, and D1 vectors for each element")
         .def("assemble_matrix", &FEM_1D::assemble_matrix, "Assemble the global stiffness matrix K and load vector D from the element contributions", py::arg("K11"), py::arg("K12"), py::arg("D1"))

@@ -41,6 +41,8 @@ private:
     function<double(double)> q;
 
 public:
+    double RESOLUTION = 1e-11;
+
     FEM_1D(
         Vector xD,
         Vector xR,
@@ -73,4 +75,4 @@ public:
     ~FEM_1D() = default;
 };
 
-vector<int> gen_Randelemente(Vector xR, Vector plist);
+vector<int> gen_Randelemente(Vector, Vector, double);

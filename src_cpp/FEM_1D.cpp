@@ -21,17 +21,18 @@ FEM_1D::FEM_1D(
                                   gamma(gamma),
                                   q(q)
 {
-    this->Randelemente = gen_Randelemente(xR, plist);
+    this->Randelemente = gen_Randelemente(xR, plist, RESOLUTION);
 }
 
-vector<int> gen_Randelemente(Vector xR, Vector plist)
+vector<int> gen_Randelemente(Vector xR, Vector plist, double RESOLUTION)
 {
+    printf("Generating Randelemente with RESOLUTION = %e\n", RESOLUTION);
     vector<int> randelemente;
     for (int j = 0; j < xR.size(); ++j)
     {
         for (int i = 0; i < plist.size(); ++i)
         {
-            if (abs(plist[i] - xR[j]) < 1e-10)
+            if (abs(plist[i] - xR[j]) < RESOLUTION)
             {
                 randelemente.push_back(i); // store node index
                 break;
