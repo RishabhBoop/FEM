@@ -185,7 +185,8 @@ void FEM_1D::solve_LGS()
 void FEM_1D::reconstruct_solution()
 {
     Sol.resize(plist.size());
-
+    
+    int free_index = 0;
     for (int i = 0; i < plist.size(); ++i)
     {
         if (find(xD.begin(), xD.end(), plist[i]) != xD.end())
@@ -196,15 +197,8 @@ void FEM_1D::reconstruct_solution()
         else
         {
             // Free node, get solution from Sol_noRW
-            int free_index = 0;
-            for (int j = 0; j < i; ++j)
-            {
-                if (find(xD.begin(), xD.end(), plist[j]) == xD.end())
-                {
-                    free_index++;
-                }
-            }
             Sol(i) = Sol_noRW(free_index);
+            free_index++;
         }
     }
 }
