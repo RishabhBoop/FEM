@@ -235,12 +235,25 @@ class fem_1d:
         t_gen_data = (time.time() - t1) * 1000.0
         timings.append(("gen_K11_K12_D1", t_gen_data))
 
+        t_assemble_start = time.time()
+
         t1 = time.time()
         self.sort_into_matrix(K11, K12, D1)
+        t_sort = (time.time() - t1) * 1000.0
+
+        t1 = time.time()
         self.apply_robin_boundary_conditions()
+        t_robin = (time.time() - t1) * 1000.0
+
+        t1 = time.time()
         self.apply_dirichlet_boundary_conditions()
-        t_assemble = (time.time() - t1) * 1000.0
+        t_dirich = (time.time() - t1) * 1000.0
+
+        t_assemble = (time.time() - t_assemble_start) * 1000.0
         timings.append(("assemble_matrix", t_assemble))
+        timings.append(("  |- sort_into_matrix", t_sort))
+        timings.append(("  |- apply_robin_BCs", t_robin))
+        timings.append(("  L apply_dirichlet_BCs", t_dirich))
 
         t1 = time.time()
         self.solve_LGS()
@@ -272,19 +285,3 @@ class fem_1d:
         error_stats = (float(np.max(error)), float(np.min(error)), float(np.mean(error)))
 
         return error, error_stats
-        print("=" * len_sep)
-
-        plt.figure(figsize=(12, 5))
-        plt.plot(self.plist, sol_test, marker="o", linestyle="", label="Weizis Testlösung")
-        plt.plot(self.plist, self.sol, marker="x", linestyle="", label="Meine Lösung")
-        plt.xlabel("Punkte")
-        plt.ylabel("Lösung")
-        plt.title(title)
-        plt.legend()
-
-        plt.figure(figsize=(12, 5))
-        plt.plot(self.plist, error, marker="o", linestyle="", label="Difference in Solution")
-        plt.xlabel("Punkte")
-        plt.ylabel("abs(Differenz)")
-        plt.title(f"{title} - Abweichung zu Weizis Data")
-        plt.legend()
