@@ -826,10 +826,17 @@ class Aufgabe3:
         radius = 0.5
         center = np.array([0.5, 3])
         # (x - center_x)² + (y - center_y)² = r²
-        mask = (p[:, 0] - center[0]) ** 2 + (p[:, 1] - center[1]) ** 2 > radius**2
-        self.plist =  self.plist[mask]
+        # mask = (p[:, 0] - center[0]) ** 2 + (p[:, 1] - center[1]) ** 2 > radius**2
+        # self.plist =  self.plist[mask]
         tri = Delaunay(self.plist)
         self.tlist = tri.simplices
+
+        # cut circle out
+        mask = (self.plist[:, 0] - center[0]) ** 2 + (self.plist[:, 1] - center[1]) ** 2 > radius**2
+        self.plist = self.plist[mask]
+        
+
+
 
         plt.figure(figsize=(10, 6))
         plt.triplot(self.plist[:, 0], self.plist[:, 1], self.tlist)
