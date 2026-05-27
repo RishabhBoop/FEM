@@ -407,10 +407,12 @@ def main():
     )  # tlist will be outputted from gmsh, for now we just hardcode it
     dr = [0, 4, 3, 5]
     xD = [plist[i, 0] for i in dr]
-    # print(xD)
+    print("xD =", xD)
     K, D = gen_necessary_data(tlist, plist)
     K, D = sort_into_matrix(plist, tlist, K, D)
     K, D = apply_dirichlet_boundary_conditions(K, D, dr, plist)
+    print("K Matrix mit Randbedingung:\n", K)
+    print("D Vector mit Randbedingung:\n", D)
 
     K = sp.csr_matrix(K)  # convert to sparse format for efficient solving
     sol = sp.linalg.spsolve(K, D)  # solve the linear system
