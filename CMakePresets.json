@@ -1,0 +1,14 @@
+{
+    "version": 8,
+    "vendor": {
+        "user/project": "FEM"
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default Config",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build"
+        }
+    ]
+}
