@@ -63,9 +63,9 @@ public:
         function<double(double, double)> f,
         function<double(double, double)> phi,
         function<double(double, double)> gamma,
-        function<double(double, double)> q);
+        function<double(double, double)> q
+    );
 
-    // void gen_tlist();
 
     Vector gen_b(const Vector &) const;
     Vector gen_c(const Vector &) const;

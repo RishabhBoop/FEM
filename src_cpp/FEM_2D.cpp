@@ -27,27 +27,6 @@ FEM_2D::FEM_2D(
 {
 }
 
-/* void FEM_2D::gen_tlist()
-{
-    int len_plist = plist.size();
-    vector<double> tmp_tlist(len_plist);         // create temporary vector to store the tlist values
-    iota(tmp_tlist.begin(), tmp_tlist.end(), 0); // fill the temporary vector with values from 0 to len_plist-1
-
-    // sort the temporary vector based on the values in plist
-    sort(tmp_tlist.begin(), tmp_tlist.end(), [this](int i, int j)
-         { return plist(i) < plist(j); });
-
-    tlist.resize(len_plist - 1, 2); // resize to the correct dimension
-
-    // insert the sorted values into tlist
-    for (int i = 0; i < len_plist - 1; ++i)
-    {
-        tlist(i, 0) = tmp_tlist[i];     // first column gets the sorted indices
-        tlist(i, 1) = tmp_tlist[i + 1]; // second column gets the next sorted index
-    }
-}
-*/
-
 Vector FEM_2D::gen_b(const Vector &y) const
 {
     // y = [y1, y2, y3] - y-coords of 3 nodes of one triangle
@@ -291,13 +270,11 @@ void FEM_2D::print_solution()
 
 vector<tuple<string, double>> FEM_2D::full_solve()
 {
-    // gen_tlist();
     auto t1 = chrono::high_resolution_clock::now();
-    // auto t_gen_tlist = chrono::duration<double, std::milli>(t1 - t0).count();
 
     auto [K11, K22, K33, K12, K13, K23, D1] = gen_local_matrices();
     auto t2 = chrono::high_resolution_clock::now();
-    auto t_gen_K11_K12_D1 = chrono::duration<double, std::milli>(t2 - t1).count();
+    auto t_gen_local_K_D = chrono::duration<double, std::milli>(t2 - t1).count();
 
     assemble_matrix(K11, K22, K33, K12, K13, K23, D1);
     auto t3 = chrono::high_resolution_clock::now();
@@ -311,11 +288,10 @@ vector<tuple<string, double>> FEM_2D::full_solve()
     auto t5 = chrono::high_resolution_clock::now();
     auto t_reconstruct_solution = chrono::duration<double, std::milli>(t5 - t4).count();
 
-    auto t_total = t_gen_K11_K12_D1 + t_assemble_matrix + t_solve_LGS + t_reconstruct_solution; // + t_gen_tlist;
+    auto t_total = t_gen_local_K_D + t_assemble_matrix + t_solve_LGS + t_reconstruct_solution;
 
     vector<tuple<string, double>> timings = {
-        // {"gen_tlist", t_gen_tlist},
-        {"gen_K11_K12_D1", t_gen_K11_K12_D1},
+        {"gen_local_K_D", t_gen_local_K_D},
         {"assemble_matrix", t_assemble_matrix},
         {"solve_LGS", t_solve_LGS},
         {"reconstruct_solution", t_reconstruct_solution},
