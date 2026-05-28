@@ -2,21 +2,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 from os import path
 
-def print_timings(timings, title="TIMING - C++ full_solve()", n_points=None, n_elems=None, save_to_file=False, backend=None, export_filename=None):
+def print_timings(timings, title="TIMING - C++ full_solve()", n_plist=None, n_tlist=None, save_to_file=False, backend=None, export_filename=None, fem_2d=False, lc=None):
     """
     Prints the performance output dynamically, preserving the order from the C++ vector of tuples.
     Expects `timings` to be a list of tuples: e.g., [("gen_tlist", 12.3), ("solve_LGS", 45.6)]
     """
-    if n_points is not None and n_elems is not None:
-        title_str = f"{title} ({n_points} Punkte, {n_elems} Elemente)"
+    if fem_2d and lc is not None:
+        title += f" (lc={lc})"
+
+    elements_name = "Dreiecke" if fem_2d else "Elemente"
+
+    if n_plist is not None and n_tlist is not None:
+        if fem_2d and lc is not None:
+            title_str = f"{title} ({n_plist} Punkte, {n_tlist} {elements_name}, lc={lc})"
+        else:
+            title_str = f"{title} ({n_plist} Punkte, {n_tlist} {elements_name})"
     else:
         title_str = title
 
-    if not n_points:
-        n_points = "xx"
+    if not n_plist:
+        n_plist = "xx"
 
-    if not n_elems:
-        n_elems = "xx"
+    if not n_tlist:
+        n_tlist = "xx"
     
 
     lines = []
@@ -53,7 +61,7 @@ def print_timings(timings, title="TIMING - C++ full_solve()", n_points=None, n_e
     print("=" * len_sep)
 
     if not export_filename:
-        export_filename = f"{title}_{n_points}points_{n_elems}elements.txt".replace(" ", "_").replace("_-_", "_")
+        export_filename = f"{title}_{n_plist}points_{n_tlist}elements.txt".replace(" ", "_").replace("_-_", "_")
 
     export_filename = "Times__" +  backend + "__" + export_filename + ".txt"
 
@@ -68,16 +76,17 @@ def print_timings(timings, title="TIMING - C++ full_solve()", n_points=None, n_e
             f.write("-" * len_sep + "\n")
             f.write(f" {tot_str}\n")
 
+  
 
-def print_error_stats(error_stats, title="Validierung", n_elems=None, save_to_file=False, backend=None, export_filename=None):
+def print_error_stats(error_stats, title="Validierung", n_tlist=None, save_to_file=False, backend=None, export_filename=None):
     """
     Prints the maximum, minimum, and mean absolute error from the C++ validation.
     """
     # Unpack the list sent from C++ (max_abs_error, min_abs_error, mean_abs_error)
     max_err, min_err, mean_err = error_stats
 
-    if n_elems is not None:
-        title_raw = f"Abweichungen für {title} ({n_elems} Elemente):"
+    if n_tlist is not None:
+        title_raw = f"Abweichungen für {title} ({n_tlist} Elemente):"
     else:
         title_raw = f"Abweichungen für {title}:"
 
