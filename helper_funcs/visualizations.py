@@ -148,3 +148,34 @@ def visualize_solution(plist, solution, title="Lösung", save_to_file=False, bac
         if backend:
             export_filename = f"{backend}__{export_filename}"
         plt.savefig(export_filename)
+
+
+def visualize_solution(plist, tlist, solution, is_3d=True, title="Lösung", save_to_file=False, backend=None, export_filename=None):
+    fig = plt.figure(figsize=(10, 8) if is_3d else (10, 6))
+    x = plist[:, 0]
+    y = plist[:, 1]
+    
+    if is_3d:
+        # 3D Setup
+        ax = fig.add_subplot(111, projection='3d')
+        plot_obj = ax.plot_trisurf(x, y, tlist, solution, cmap="viridis", edgecolor='none')
+        ax.set_zlabel("phi")
+    else:
+        # 2D Setup
+        ax = fig.add_subplot(111)
+        plot_obj = ax.tricontourf(x, y, tlist, solution, cmap="viridis")
+    
+    # Apply standard labels and title to whatever axes (2D or 3D) were created
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title(title)
+    
+    # Attach the colorbar to the specific plot object we created (surf or contour)
+    fig.colorbar(plot_obj, ax=ax, label="Lösung phi", pad=0.1 if is_3d else 0.05)
+    
+    if save_to_file:
+        if not export_filename:
+            export_filename = f"{title}.png".replace(" ", "_")
+        if backend:
+            export_filename = f"{backend}__{export_filename}"
+        plt.savefig(export_filename)
