@@ -303,21 +303,6 @@ vector<tuple<string, double>> FEM_2D::full_solve()
     auto t3 = chrono::high_resolution_clock::now();
     auto t_assemble_matrix = chrono::duration<double, std::milli>(t3 - t2).count();
 
-    printf("K:\n");
-    for (int k = 0; k < K.outerSize(); ++k)
-    {
-        for (Eigen::SparseMatrix<double>::InnerIterator it(K, k); it; ++it)
-        {
-            printf("K(%d, %d) = %f\n", it.row(), it.col(), it.value());
-        }
-    }
-
-    printf("D:\n");
-    for (int i = 0; i < D.size(); ++i)
-    {
-        printf("D(%d) = %f\n", i, D(i));
-    }
-
     solve_LGS();
     auto t4 = chrono::high_resolution_clock::now();
     auto t_solve_LGS = chrono::duration<double, std::milli>(t4 - t3).count();
