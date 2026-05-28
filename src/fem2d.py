@@ -209,7 +209,6 @@ def sort_into_matrix(
     K23: np.ndarray,
     D1: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-
     K = np.zeros((len(plist), len(plist)))
     D = np.zeros(len(plist))
     # K11 = K_local[:, 0, 0]
@@ -218,7 +217,7 @@ def sort_into_matrix(
     # K22 = K_local[:, 1, 1]
     # K23 = K_local[:, 1, 2]
     # K33 = K_local[:, 2, 2]
-    D1 = D1[:, 0, 0]
+    D1 = D1[:, 0]
     for i in range(len(tlist)):
         t = tlist[i]
 
