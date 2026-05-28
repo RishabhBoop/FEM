@@ -16,3 +16,8 @@ class Colors:
     BOLDMAGENTA = "\033[1;35m" # Bold Magenta
     BOLDCYAN = "\033[1;36m"    # Bold Cyan
     BOLDWHITE = "\033[1;37m"   # Bold White
+
+    SUCCESS = BOLDGREEN
+    FAIL = BOLDRED
+    INFO = BOLDBLUE
+    WARNING = BOLDYELLOW
