@@ -8,16 +8,6 @@ from typing import Callable
 # -------------------------------- Global Functions --------------------------------
 
 
-# def gen_randwerte_list(xD, xR, plist):
-#     randelemente = []
-#     for val in xD + xR:
-#         # Check for matching coordinates in plist
-#         idx = np.where(np.isclose(plist, val))[0]
-#         if len(idx) > 0:
-#             randelemente.append(idx[0])
-#     return np.array(randelemente)
-
-
 @jit(nopython=True)
 def vec_sort_into_matrix(
     plist: np.ndarray,
@@ -30,7 +20,6 @@ def vec_sort_into_matrix(
     K23: np.ndarray,
     D1: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-
     K = np.zeros((len(plist), len(plist)))
     D = np.zeros(len(plist))
     # K11 = K_local[:, 0, 0]
@@ -39,7 +28,7 @@ def vec_sort_into_matrix(
     # K22 = K_local[:, 1, 1]
     # K23 = K_local[:, 1, 2]
     # K33 = K_local[:, 2, 2]
-    D1 = D1[:, 0, 0]
+    D1 = D1[:, 0]
     for i in range(len(tlist)):
         t = tlist[i]
 
@@ -65,6 +54,21 @@ def vec_sort_into_matrix(
     return K, D
 
 
+def dummy_pass():
+    """
+    Dummy function to compile the vec_sort_into_matrix
+    """
+    dummy_plist = np.zeros((3, 2))
+    dummy_tlist = np.zeros((1, 3), dtype=int)
+    dummy_K11 = np.zeros(1)
+    dummy_K22 = np.zeros(1)
+    dummy_K33 = np.zeros(1)
+    dummy_K12 = np.zeros(1)
+    dummy_K13 = np.zeros(1)
+    dummy_K23 = np.zeros(1)
+    dummy_D1 = np.zeros((1, 1))
+    vec_sort_into_matrix(dummy_plist, dummy_tlist, dummy_K11, dummy_K22, dummy_K33, dummy_K12, dummy_K13, dummy_K23, dummy_D1)
+
 def gen_b(y):
     # Slice the nodes (columns)
     b1 = y[:, 1] - y[:, 2]
@@ -85,7 +89,7 @@ def gen_area(p):
     twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
         p[:, 0, 1] - p[:, 2, 1]
     )
-    return twodeltaE / 2
+    return np.abs(twodeltaE) / 2
 
 
 def gen_2area(p):
@@ -93,27 +97,26 @@ def gen_2area(p):
     twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
         p[:, 0, 1] - p[:, 2, 1]
     )
-    return twodeltaE
+    return np.abs(twodeltaE)
 
 
 # ------------------------------------------------------------------------------------------------
 
 
-class fem_2d:
+class FEM_2D:
     def __init__(
         self,
         xD: list,
         xR: list,
         plist: np.ndarray,
         tlist: np.ndarray,
-        randelemente: list,
         alpha1: Callable,
         alpha2: Callable,
         beta: Callable,
         f: Callable,
-        # phi: Callable,
-        # gamma: Callable,
-        # q: Callable,
+        phi: Callable,
+        gamma: Callable,
+        q: Callable,
     ):
         """
         Class for a 2D FEM Solution.
@@ -131,10 +134,13 @@ class fem_2d:
         # --- Data needed to apply Randbedingungen ---
         self.xR = xR
         self.xD = xD
-        self.randelemente = randelemente
-        # --- Data needed to solve ---
         self.plist = plist
         self.tlist = tlist
+        
+        # Find all points whose x-coordinate is present in xD 
+        self.randelemente = np.where(np.isin(self.plist[:, 0], self.xD))[0].tolist()
+
+        # --- Data needed to solve ---
         self.K = None
         self.D = None
         self.sol = None
@@ -143,9 +149,9 @@ class fem_2d:
         self.alpha2 = alpha2
         self.beta = beta
         self.f = f
-        # self.phi = phi
-        # self.gamma = gamma
-        # self.q = q
+        self.phi = phi
+        self.gamma = gamma
+        self.q = q
 
     def gen_necessary_data(self) -> tuple:
         p = self.plist[self.tlist]
@@ -170,7 +176,6 @@ class fem_2d:
         b0, b1, b2 = bj[:, 0], bj[:, 1], bj[:, 2]
         c0, c1, c2 = cj[:, 0], cj[:, 1], cj[:, 2]
 
-        # tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3, 3)
         # Diagonals (tmpmat value = 2)
         K11 = coeff_b * (b0 * b0) + coeff_c * (c0 * c0) + coeff_beta * 2
         K22 = coeff_b * (b1 * b1) + coeff_c * (c1 * c1) + coeff_beta * 2
@@ -181,7 +186,7 @@ class fem_2d:
         K13 = coeff_b * (b0 * b2) + coeff_c * (c0 * c2) + coeff_beta * 1
         K23 = coeff_b * (b1 * b2) + coeff_c * (c1 * c2) + coeff_beta * 1
 
-        Dloc_val = fm * gen_area(p) / 3
+        Dloc_val = fm * twodeltae / 6
         Dloc = np.column_stack((Dloc_val, Dloc_val, Dloc_val))  # Shape (N, 3)
 
         return K11, K22, K33, K12, K13, K23, Dloc
@@ -225,11 +230,11 @@ class fem_2d:
             self.D -= self.K[:, re] * phi_val
 
         # wegstreichen
-        newK = np.delete(self.K, [re for re in self.randelemente], axis=1)  # Spalte von Rand a und b in der K-Matrix wegstreichen
-        newK = np.delete(newK, [re for re in self.randelemente], axis=0)  # Zeile von Rand a in der K-Matrix wegstreichen
+        self.K = np.delete(self.K, [re for re in self.randelemente], axis=1)  # Spalte von Rand a und b in der K-Matrix wegstreichen
+        self.K = np.delete(self.K, [re for re in self.randelemente], axis=0)  # Zeile von Rand a in der K-Matrix wegstreichen
 
-        newD = np.delete(self.D, [re for re in self.randelemente])  # Rand a in D Vector wegstreichen
-        return newK, newD
+        self.D = np.delete(self.D, [re for re in self.randelemente])  # Rand a in D Vector wegstreichen
+        return self.K, self.D
 
     def solve_LGS(self):
         """
@@ -246,21 +251,21 @@ class fem_2d:
             return  # no reconstruction needed
 
         # Identify Dirichlet boundary nodes based on x-coordinate
-        actualRE = [re for re in self.randelemente if self.plist[re, 0] in self.xD]
 
         # Allocate full solution array
         sol_new = np.zeros(len(self.plist))
-        free_indices = np.delete(np.arange(len(self.plist)), actualRE)
+        free_indices = np.delete(np.arange(len(self.plist)), self.randelemente)
 
         # Fill free nodes with the solution from LGS
         sol_new[free_indices] = self.sol
 
         # Fill Dirichlet boundary nodes using 2D coordinates
-        for re in actualRE:
+        for re in self.randelemente:
             x_coord = self.plist[re, 0]
             y_coord = self.plist[re, 1]
             sol_new[re] = self.phi(x_coord, y_coord)
 
+        self.sol = sol_new
         return sol_new
 
     def visualize_solution(self):
@@ -285,24 +290,19 @@ class fem_2d:
         timings = []
 
         t1 = time.time()
-        self.gen_tlist()
-        t_gen_tlist = (time.time() - t1) * 1000.0
-        timings.append(("gen_tlist", t_gen_tlist))
-
-        t1 = time.time()
-        K11, K12, D1 = self.gen_necessary_data()
+        K11, K22, K33, K12, K13, K23, D1 = self.gen_necessary_data()
         t_gen_data = (time.time() - t1) * 1000.0
-        timings.append(("gen_K11_K12_D1", t_gen_data))
+        timings.append(("gen_local_K_D", t_gen_data))
 
         t_assemble_start = time.time()
 
         t1 = time.time()
-        self.sort_into_matrix(K11, K12, D1)
+        self.sort_into_matrix(K11, K22, K33, K12, K13, K23, D1)
         t_sort = (time.time() - t1) * 1000.0
 
-        t1 = time.time()
-        self.apply_robin_boundary_conditions()
-        t_robin = (time.time() - t1) * 1000.0
+        # t1 = time.time()
+        # self.apply_robin_boundary_conditions()
+        # t_robin = (time.time() - t1) * 1000.0
 
         t1 = time.time()
         self.apply_dirichlet_boundary_conditions()
@@ -311,7 +311,7 @@ class fem_2d:
         t_assemble = (time.time() - t_assemble_start) * 1000.0
         timings.append(("assemble_matrix", t_assemble))
         timings.append(("  |- sort_into_matrix", t_sort))
-        timings.append(("  |- apply_robin_BCs", t_robin))
+        # timings.append(("  |- apply_robin_BCs", t_robin))
         timings.append(("  L apply_dirichlet_BCs", t_dirich))
 
         t1 = time.time()
@@ -324,7 +324,8 @@ class fem_2d:
         t_recon = (time.time() - t1) * 1000.0
         timings.append(("reconstruct_solution", t_recon))
 
-        t_total = (time.time() - t0) * 1000.0
+        # Sum the timings to match C++, excluding the time it takes to append to the list itself
+        t_total = t_gen_data + t_assemble + t_solve + t_recon
         timings.append(("total_time", t_total))
 
         return timings
