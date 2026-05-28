@@ -144,95 +144,80 @@ def gen_c(x):
 
 
 def gen_area(p):
-    # deltaE
-    # 2deltaE = (x1-x3)(y2-y3) - (x2-x3)(y1-y2)
-    if p.ndim == 3:
-        twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
-            p[:, 0, 1] - p[:, 2, 1]
-        )
-    else:
-        twodeltaE = (p[0, 0] - p[2, 0]) * (p[1, 1] - p[2, 1]) - (p[1, 0] - p[2, 0]) * (p[0, 1] - p[2, 1])
+    twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
+        p[:, 0, 1] - p[:, 2, 1]
+    )
     return twodeltaE / 2
 
 
 def gen_2area(p):
     # 2deltaE = (x1-x3)(y2-y3) - (x2-x3)(y1-y2)
-    if p.ndim == 3:
-        twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
-            p[:, 0, 1] - p[:, 2, 1]
-        )
-    else:
-        twodeltaE = (p[0, 0] - p[2, 0]) * (p[1, 1] - p[2, 1]) - (p[1, 0] - p[2, 0]) * (p[0, 1] - p[2, 1])
+    twodeltaE = (p[:, 0, 0] - p[:, 2, 0]) * (p[:, 1, 1] - p[:, 2, 1]) - (p[:, 1, 0] - p[:, 2, 0]) * (
+        p[:, 0, 1] - p[:, 2, 1]
+    )
     return twodeltaE
 
 
-def gen_necessary_data(tlist: np.ndarray, plist: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    # for t in tlist:
-    #     p = plist[t]
-    #     bj = gen_b(p[:, 1])
-    #     cj = gen_c(p[:, 0])
-
-    #     twodeltae = gen_2area(p)
-
-    #     xm = np.mean(p[:, 0])
-    #     ym = np.mean(p[:, 1])
-
-    #     a1m = alpha1(xm, ym)
-    #     a2m = alpha2(xm, ym)
-    #     betam = beta(xm, ym)
-    #     fm = f(xm, ym)
-
-    #     tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3,3)
-
-    #     Kloc = (a1m/(2*twodeltae)) * bj * bj.reshape(3,1) + (a2m/(2*twodeltae)) * cj * cj.reshape(3,1) + (betam*twodeltae/24) * tmpmat
-
-    #     Dloc = fm * gen_area(p) / 3 * np.ones(3)
+def gen_necessary_data(tlist: np.ndarray, plist: np.ndarray) -> tuple:
     p = plist[tlist]
     bj = gen_b(p[:, :, 1])
-    # print("bj:\n", bj)
     cj = gen_c(p[:, :, 0])
-    # print("cj:\n", cj)
     twodeltae = gen_2area(p)
+    
     xm = np.mean(p[:, :, 0], axis=1)
     ym = np.mean(p[:, :, 1], axis=1)
     a1m = alpha1(xm, ym)
     a2m = alpha2(xm, ym)
     betam = beta(xm, ym)
     fm = f(xm, ym)
-    tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3, 3)
 
-    bj_outer = bj[:, :, np.newaxis] * bj[:, np.newaxis, :]
-    # print("bj_outer:\n", bj_outer)
-    cj_outer = cj[:, :, np.newaxis] * cj[:, np.newaxis, :]
-    # print("cj_outer:\n", cj_outer)
+    # Calculate the scalar coefficients for each triangle
+    coeff_b = a1m / (2 * twodeltae)
+    coeff_c = a2m / (2 * twodeltae)
+    coeff_beta = (betam * twodeltae) / 24
 
-    Kloc = (
-        (a1m / (2 * twodeltae))[:, np.newaxis, np.newaxis] * bj_outer
-        + (a2m / (2 * twodeltae))[:, np.newaxis, np.newaxis] * cj_outer
-        + (betam * twodeltae / 24)[:, np.newaxis, np.newaxis] * tmpmat[np.newaxis, :, :]
-    )
-    Dloc = (fm * gen_area(p) / 3)[:, np.newaxis, np.newaxis] * np.ones((len(tlist), 3))
-    # print("Kloc:\n", Kloc)
-    # print("Dloc:\n", Dloc)
+    # Extract the individual columns
+    # Shape of each of these is (N,)
+    b0, b1, b2 = bj[:, 0], bj[:, 1], bj[:, 2]
+    c0, c1, c2 = cj[:, 0], cj[:, 1], cj[:, 2]
 
-    return Kloc, Dloc
+    # tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3, 3) 
+    # Diagonals (tmpmat value = 2)
+    K11 = coeff_b * (b0 * b0) + coeff_c * (c0 * c0) + coeff_beta * 2
+    K22 = coeff_b * (b1 * b1) + coeff_c * (c1 * c1) + coeff_beta * 2
+    K33 = coeff_b * (b2 * b2) + coeff_c * (c2 * c2) + coeff_beta * 2
+
+    # Non-diagonals (tmpmat value = 1)
+    K12 = coeff_b * (b0 * b1) + coeff_c * (c0 * c1) + coeff_beta * 1
+    K13 = coeff_b * (b0 * b2) + coeff_c * (c0 * c2) + coeff_beta * 1
+    K23 = coeff_b * (b1 * b2) + coeff_c * (c1 * c2) + coeff_beta * 1
+
+    Dloc_val = (fm * gen_area(p) / 3) 
+    Dloc = np.column_stack((Dloc_val, Dloc_val, Dloc_val)) # Shape (N, 3)
+
+    return K11, K22, K33, K12, K13, K23, Dloc
 
 
 def sort_into_matrix(
     plist: np.ndarray,
     tlist: np.ndarray,
-    K_local: np.ndarray,
+    K11: np.ndarray,
+    K22: np.ndarray,
+    K33: np.ndarray,
+    K12: np.ndarray,
+    K13: np.ndarray,
+    K23: np.ndarray,
     D1: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
 
     K = np.zeros((len(plist), len(plist)))
     D = np.zeros(len(plist))
-    K11 = K_local[:, 0, 0]
-    K12 = K_local[:, 0, 1]
-    K13 = K_local[:, 0, 2]
-    K22 = K_local[:, 1, 1]
-    K23 = K_local[:, 1, 2]
-    K33 = K_local[:, 2, 2]
+    # K11 = K_local[:, 0, 0]
+    # K12 = K_local[:, 0, 1]
+    # K13 = K_local[:, 0, 2]
+    # K22 = K_local[:, 1, 1]
+    # K23 = K_local[:, 1, 2]
+    # K33 = K_local[:, 2, 2]
     D1 = D1[:, 0, 0]
     for i in range(len(tlist)):
         t = tlist[i]
@@ -280,7 +265,7 @@ def apply_robin_boundary_conditions(
 def apply_dirichlet_boundary_conditions(
     K: np.ndarray, D: np.ndarray, randelemente: np.ndarray, plist: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
-    
+
     # print(K)
     # print(randelemente)
     # auf rechte seite bringen
@@ -289,12 +274,8 @@ def apply_dirichlet_boundary_conditions(
         D -= K[:, re] * phi_val
 
     # wegstreichen
-    newK = np.delete(
-        K, [re for re in randelemente], axis=1
-    )  # Spalte von Rand a und b in der K-Matrix wegstreichen
-    newK = np.delete(
-        newK, [re for re in randelemente], axis=0
-    )  # Zeile von Rand a in der K-Matrix wegstreichen
+    newK = np.delete(K, [re for re in randelemente], axis=1)  # Spalte von Rand a und b in der K-Matrix wegstreichen
+    newK = np.delete(newK, [re for re in randelemente], axis=0)  # Zeile von Rand a in der K-Matrix wegstreichen
 
     newD = np.delete(D, [re for re in randelemente])  # Rand a in D Vector wegstreichen
     return newK, newD
@@ -328,14 +309,14 @@ def reconstruct_sol(sol: np.ndarray, plist: np.ndarray, randelemente: np.ndarray
 
     # Identify Dirichlet boundary nodes based on x-coordinate
     actualRE = [re for re in randelemente if plist[re, 0] in xD]
-    
+
     # Allocate full solution array
     sol_new = np.zeros(len(plist))
     free_indices = np.delete(np.arange(len(plist)), actualRE)
 
     # Fill free nodes with the solution from LGS
-    sol_new[free_indices] = sol  
-    
+    sol_new[free_indices] = sol
+
     # Fill Dirichlet boundary nodes using 2D coordinates
     for re in actualRE:
         x_coord = plist[re, 0]
@@ -367,7 +348,6 @@ def plot_sol(plist: np.ndarray, sol_phi: np.ndarray):
     plt.grid()
     plt.legend()
     # plt.show()
-
 
 
 # ------------------------- Validierung mit Weizi Data -------------------------
@@ -408,8 +388,8 @@ def main():
     dr = [0, 4, 3, 5]
     xD = [plist[i, 0] for i in dr]
     print("xD =", xD)
-    K, D = gen_necessary_data(tlist, plist)
-    K, D = sort_into_matrix(plist, tlist, K, D)
+    K11, K22, K33, K12, K13, K23, Dloc = gen_necessary_data(tlist, plist)
+    K, D = sort_into_matrix(plist, tlist, K11, K22, K33, K12, K13, K23, Dloc)
     K, D = apply_dirichlet_boundary_conditions(K, D, dr, plist)
     print("K Matrix mit Randbedingung:\n", K)
     print("D Vector mit Randbedingung:\n", D)
