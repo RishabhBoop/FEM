@@ -219,8 +219,6 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
         int m0 = node_to_matrix[rr(i, 0)];
         int m1 = node_to_matrix[rr(i, 1)];
 
-        printf("Robin edge between [%d, %d]\n", rr(i, 0), rr(i, 1));
-
         // Skip if both nodes are Dirichlet
         if (m0 == -1 && m1 == -1)
             continue;
@@ -232,18 +230,12 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
         double mid_y = (p0.second + p1.second) / 2.0;
         double edge_length = sqrt(pow(p1.first - p0.first, 2) + pow(p1.second - p0.second, 2));
 
-        printf("\tMidpoint: (%f, %f), LE: %f\n", mid_x, mid_y, edge_length);
-
         double gamma_val = gamma(mid_x, mid_y);
         double q_val = q(mid_x, mid_y);
-
-        printf("\tGamma(x_M, y_M): %f, q(x_M, y_M): %f\n", gamma_val, q_val);
 
         double gamma_val_11 = gamma_val * edge_length / 3.0;
         double gamma_val_12 = gamma_val * edge_length / 6.0;
         double q_val_contribution = q_val * edge_length / 2.0;
-
-        printf("\tGamma_11 = %f, Gamma_12 = %f, q = %f\n", gamma_val_11, gamma_val_12, q_val_contribution);
 
         // Node 0 contributions
         if (m0 != -1)
