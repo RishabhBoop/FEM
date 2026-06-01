@@ -185,7 +185,7 @@ void FEM_1D::solve_LGS()
 void FEM_1D::reconstruct_solution()
 {
     Sol.resize(plist.size());
-    
+
     int free_index = 0;
     for (int i = 0; i < plist.size(); ++i)
     {

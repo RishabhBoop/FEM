@@ -16,6 +16,7 @@ from helper_funcs.colors import Colors as colors
 from helper_funcs.visualizations import visualize_solution, print_timings
 from helper_funcs.mesh import get_plist_tlist_from_gmsh, get_boundaries, get_boundary_edges
 
+
 @cfunc(float64(float64, float64))
 def alpha1(x, y):
     return y * x + 1
@@ -102,16 +103,17 @@ def gen_mesh():
     gmsh.finalize()
 
 
-def show_mesh(filename = "fem2d_skript.msh"):
+def show_mesh(filename="fem2d_skript.msh"):
     gmsh.initialize()
     gmsh.open(filename)
     gmsh.fltk.run()
     gmsh.finalize()
 
+
 def main():
     gen_mesh()
     print(colors.SUCCESS + "Mesh generated successfully." + colors.RESET)
-    
+
     t0 = time()
     # plist, tlist = get_plist_tlist_from_gmsh("fem2d_skript.msh")
     plist = np.array([[1, 0.7], [0.5, 0.35], [0.5, 0.18], [0, 0], [0, 0.7], [1, 0]])
@@ -124,7 +126,7 @@ def main():
     print(colors.INFO + "Number of points (plist):", len(plist), colors.RESET)
     print(colors.INFO + "Number of Triangles (tlist):", len(tlist), colors.RESET)
     plist_time = t1 - t0
-    
+
     t0 = time()
     # dr = get_boundary_edges("fem2d_skript.msh", group_tag=20)
     dr = []
@@ -144,9 +146,8 @@ def main():
     print("dr =", dr)
     print("rr =", rr_edges)
 
-
     fem_solver = fem_cpp.FEM_2D(dr, rr_edges, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, g)
-    
+
     try:
         timings = fem_solver.full_solve()
         sol = fem_solver.get_Solution()
@@ -156,7 +157,6 @@ def main():
         print(colors.FAIL + "Error during FEM solve: " + str(e) + colors.RESET)
         return
 
-    
     timings.insert(0, ("gen_plist_tlist", plist_time))
     timings.insert(1, ("get_boundaries", boundary_time))
 
