@@ -35,8 +35,8 @@ PYBIND11_MODULE(fem_cpp, m)
 
     py::class_<FEM_2D>(m, "FEM_2D")
         .def(py::init<
-             Vector,
-             Vector,
+             VectorINT,
+             MatrixINT,
              Matrix,
              MatrixINT,
              function<double(double, double)>,
@@ -60,5 +60,6 @@ PYBIND11_MODULE(fem_cpp, m)
         .def("full_solve", &FEM_2D::full_solve, "Run the full FEM solve process")
         .def("print_solution", &FEM_2D::print_solution, "Print the computed solution")
         .def("get_Solution", &FEM_2D::get_Solution, "Get the computed solution vector as a NumPy array")
+        .def("get_D", &FEM_2D::get_D, "Get the computed load vector D as a NumPy array")
         .def("validate_sol", &FEM_2D::validate_sol, "Validate the computed solution against an analytical solution");
 }

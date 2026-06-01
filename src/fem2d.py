@@ -45,87 +45,15 @@ def phi(x, y):
     return x**2 + y
 
 
-# def gamma(x):
-#     pass
+def gamma(x, y):
+    return 2 + x**2 + y**2
 
 
-# def q(x):
-#     pass
+def q(x, y):
+    return x - y
 
 
 # ------------------------- Berechnung -------------------------
-
-
-# def gen_tlist(plist: np.ndarray) -> np.ndarray:
-#     tlist_tmp = np.argsort(plist)
-#     tmp1 = tlist_tmp[0:-1]
-#     tmp2 = tlist_tmp[1:]
-#     tlist = np.array(list(zip(tmp1, tmp2)))
-#     return tlist
-
-# def gen_2d_tlist(plist: np.ndarray) -> np.ndarray:
-#     triangles = []
-#     for i in range(N0 - 1):
-#         for j in range(N0 - 1):
-#             p1 = i * N0 + j
-#             p2 = p1 + 1
-#             p3 = p1 + N0
-#             p4 = p3 + 1
-#             triangles += [[p1, p2, p3], [p2, p4, p3]]
-#             plt.triplot(plist[:, 0], plist[:, 1], [[p1, p2, p3]], marker="o", color="red")
-#             plt.pause(interval=0.2)
-#             plt.triplot(plist[:, 0], plist[:, 1], [[p2, p4, p3]], marker="o", color="red")
-#             plt.pause(interval=0.2)
-
-#     triangles = np.array(triangles)
-
-
-# def gen_randwerte_liste(plist: np.ndarray) -> np.ndarray:
-#     randelemente = []
-#     for val in xD + xR:
-#         # Check for matching coordinates in plist
-#         idx = np.where(np.isclose(plist, val))[0]
-#         if len(idx) > 0:
-#             randelemente.append(idx[0])
-#     return np.array(randelemente)
-
-
-# def gen_table(tlist: np.ndarray, plist: np.ndarray) -> pd.DataFrame:
-#     table = []
-#     for t in tlist:
-#         x1 = plist[t[0]]
-#         x2 = plist[t[1]]
-#         L_E = x2 - x1
-#         x_M = (x1 + x2) / 2
-#         alpha_M = alpha(x_M)
-#         beta_M = beta(x_M)
-#         f_M = f(x_M)
-#         K11 = (alpha_M / L_E) + (L_E * beta_M / 3)
-#         # K22 = K11
-
-#         K12 = (L_E * beta_M / 6) - (alpha_M / L_E)
-#         # K21 = K12
-
-#         D1 = L_E * f_M / 2
-#         # D2 = D1
-
-#         table.append(
-#             {
-#                 "t": t,
-#                 "x1 ; x2": (x1, x2),
-#                 "L_E": L_E,
-#                 "x_M": x_M,
-#                 "alpha(x_M)": alpha_M,
-#                 "beta(x_M)": beta_M,
-#                 "f(x_M)": f_M,
-#                 "K11 = K22": K11,  # 11 and 22 are local indexes, the global indexes are dependent on the corresponding t-element
-#                 "K12 = K21": K12,  # 12 and 21 are local indexes, the global indexes are dependent on the corresponding t-element
-#                 "D1 = D2": D1,
-#             }
-#         )
-#     table = pd.DataFrame(table)
-#     return table
-
 
 def gen_b(y):
     # Slice the nodes (columns)
@@ -163,7 +91,7 @@ def gen_necessary_data(tlist: np.ndarray, plist: np.ndarray) -> tuple:
     bj = gen_b(p[:, :, 1])
     cj = gen_c(p[:, :, 0])
     twodeltae = gen_2area(p)
-    
+
     xm = np.mean(p[:, :, 0], axis=1)
     ym = np.mean(p[:, :, 1], axis=1)
     a1m = alpha1(xm, ym)
@@ -181,7 +109,7 @@ def gen_necessary_data(tlist: np.ndarray, plist: np.ndarray) -> tuple:
     b0, b1, b2 = bj[:, 0], bj[:, 1], bj[:, 2]
     c0, c1, c2 = cj[:, 0], cj[:, 1], cj[:, 2]
 
-    # tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3, 3) 
+    # tmpmat = np.array([2, 1, 1, 1, 2, 1, 1, 1, 2]).reshape(3, 3)
     # Diagonals (tmpmat value = 2)
     K11 = coeff_b * (b0 * b0) + coeff_c * (c0 * c0) + coeff_beta * 2
     K22 = coeff_b * (b1 * b1) + coeff_c * (c1 * c1) + coeff_beta * 2
@@ -192,8 +120,8 @@ def gen_necessary_data(tlist: np.ndarray, plist: np.ndarray) -> tuple:
     K13 = coeff_b * (b0 * b2) + coeff_c * (c0 * c2) + coeff_beta * 1
     K23 = coeff_b * (b1 * b2) + coeff_c * (c1 * c2) + coeff_beta * 1
 
-    Dloc_val = (fm * gen_area(p) / 3) 
-    Dloc = np.column_stack((Dloc_val, Dloc_val, Dloc_val)) # Shape (N, 3)
+    Dloc_val = fm * gen_area(p) / 3
+    Dloc = np.column_stack((Dloc_val, Dloc_val, Dloc_val))  # Shape (N, 3)
 
     return K11, K22, K33, K12, K13, K23, Dloc
 
@@ -246,16 +174,35 @@ def sort_into_matrix(
 def apply_robin_boundary_conditions(
     K: np.ndarray, D: np.ndarray, randelemente: np.ndarray, plist: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Applies the Robin boundary conditions to the K matrix and D vector according to the randelemente list.
+    """
 
-    # sort out randlelemente for Robin RW (check if they are in xR)
-    actualRE = [re for re in randelemente if plist[re] in xR]
+    def edge_length(p0: np.ndarray, p1: np.ndarray) -> float:
+        return float(np.linalg.norm(p1 - p0))
 
-    for re in actualRE:
-        gamma_val = gamma(plist[re])
-        q_val = q(plist[re])
+    for re in randelemente:
+        p0 = plist[re[0]]
+        p1 = plist[re[1]]
+        mid = 0.5 * (p0 + p1)
+        length = edge_length(p0, p1)
 
-        # adjust K and D for Robin BCs
-        K[re, re] += gamma_val
+        gamma_val = gamma(mid[0], mid[1])
+        q_val = q(mid[0], mid[1])
+
+        gamma_val_11 = gamma_val * length / 3
+        gamma_val_12 = gamma_val * length / 6
+        q_val = q_val * length / 2
+
+        print(f"Applying Robin BC at node {re}:")
+        print(f"\tgamma_val_11 = {gamma_val_11:.6e}")
+        print(f"\tgamma_val_12 = {gamma_val_12:.6e}")
+        print(f"\tq_val = {q_val:.6e}")
+
+        K[re[0], re[0]] += gamma_val_11
+        K[re[1], re[1]] += gamma_val_11
+        K[re[0], re[1]] += gamma_val_12
+        K[re[1], re[0]] += gamma_val_12
         D[re] += q_val
 
     return K, D
@@ -278,28 +225,6 @@ def apply_dirichlet_boundary_conditions(
 
     newD = np.delete(D, [re for re in randelemente])  # Rand a in D Vector wegstreichen
     return newK, newD
-
-
-def alt_apply_dirichlet_boundary_conditions(
-    K: np.ndarray, D: np.ndarray, randelemente: np.ndarray, plist: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
-
-    # determine actual randelemente by matching x-coordinate (plist entries are [x,y])
-    actualRE = [re for re in randelemente if plist[re, 0] in xD]
-
-    # adjust D vector since Dirichlet BCs will be imposed in K
-    for re in actualRE:
-        phi_val = phi(plist[re, 0], plist[re, 1])
-        D -= K[:, re] * phi_val
-
-    # set rows/cols to enforce Dirichlet: zero row/col, set diagonal to 1 and D to prescribed value
-    for re in actualRE:
-        K[:, re] = 0
-        K[re, :] = 0
-        K[re, re] = 1
-        D[re] = phi(plist[re, 0], plist[re, 1])
-
-    return K, D
 
 
 def reconstruct_sol(sol: np.ndarray, plist: np.ndarray, randelemente: np.ndarray) -> np.ndarray:
@@ -384,11 +309,18 @@ def main():
     tlist = np.array(
         [[0, 4, 1], [3, 1, 4], [5, 0, 1], [3, 5, 2], [2, 1, 3], [5, 1, 2]]
     )  # tlist will be outputted from gmsh, for now we just hardcode it
-    dr = [0, 4, 3, 5]
+    # dr = [0, 4, 3, 5]
+    dr = []
+    rr = [[3, 5], [0, 4], [4, 3], [5, 0]]
+
     xD = [plist[i, 0] for i in dr]
+    xR = [plist[i, 0] for i in rr]
     print("xD =", xD)
+    print("xR =", xR)
+
     K11, K22, K33, K12, K13, K23, Dloc = gen_necessary_data(tlist, plist)
     K, D = sort_into_matrix(plist, tlist, K11, K22, K33, K12, K13, K23, Dloc)
+    K, D = apply_robin_boundary_conditions(K, D, rr, plist)
     K, D = apply_dirichlet_boundary_conditions(K, D, dr, plist)
     print("K Matrix mit Randbedingung:\n", K)
     print("D Vector mit Randbedingung:\n", D)

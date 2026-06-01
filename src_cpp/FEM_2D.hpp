@@ -26,8 +26,8 @@ using namespace std;
 class FEM_2D
 {
 private:
-    Vector xD;
-    Vector xR;
+    VectorINT dr;
+    MatrixINT rr;
 
     vector<int> Randelemente;
 
@@ -49,12 +49,14 @@ private:
     function<double(double, double)> gamma;
     function<double(double, double)> q;
 
+    vector<bool> is_dirichlet;
+
 public:
     double RESOLUTION = 1e-11;
 
     FEM_2D(
-        Vector xD,
-        Vector xR,
+        VectorINT dr,
+        MatrixINT rr,
         Matrix plist,
         MatrixINT tlist,
         function<double(double, double)> alpha1,
@@ -83,7 +85,11 @@ public:
 
     void print_solution();
 
+    void print_D();
+
     Vector get_Solution();
+
+    Vector get_D();
 
     tuple<Vector, vector<double>> validate_sol(Vector, double);
 

@@ -15,9 +15,9 @@ int main()
     auto phi = [](double x, double y)
     { return pow(x, 2) + y; };
     auto gamma = [](double x, double y)
-    { return 0.0; };
+    { return 2 + pow(x, 2) + pow(y, 2); };
     auto q = [](double x, double y)
-    { return 0.0; };
+    { return x - y; };
 
     // plist = np.array([[1, 0.7], [0.5, 0.35], [0.5, 0.18], [0, 0], [0, 0.7], [1, 0]])
     Matrix plist(6, 2);
@@ -37,25 +37,32 @@ int main()
         2, 1, 3,
         5, 1, 2;
 
-    Vector xD(4); // Dirichlet boundary nodes
-    VectorINT dr(4);
-    dr << 0, 4, 3, 5; // Dirichlet boundary node indices
-    for (int i = 0; i < dr.size(); ++i)
-    {
-        xD(i) = plist(dr(i), 0); // Extract x-coordinate of each Dirichlet node
-    }
-    printf("Dirichlet boundary nodes xD = [");
-    for (int i = 0; i < xD.size(); ++i)    {
-        printf("%f ", xD(i));
+    // Vector xD(4); // Dirichlet boundary nodes
+    VectorINT dr(0);
+    // dr << 0, 4, 3, 5; // Dirichlet boundary node indices
+    printf("Dirichlet boundary nodes dR = [");
+    for (int i = 0; i < dr.size(); ++i)    {
+        printf("%d ", dr(i));
     }
     printf("]\n");
 
-    Vector xR(0); // No Robin boundary nodes
-    // xR << 1.0, 2.0; // Robin boundary nodes
+    
+    MatrixINT rr(4, 2); // Robin boundary edges (4 edges, each defined by 2 node indices)
+    rr << 3, 5,
+    0, 4,
+    4, 3,
+    5, 0;
+    
+    printf("Robin boundary edges rr = [");
+    for (int i = 0; i < 4; ++i)    {
+        printf("(%d, %d) ", rr(i, 0), rr(i, 1));
+    }    
+    printf("]\n");
+    
 
     FEM_2D TST(
-        xD,
-        xR,
+        dr,
+        rr,
         plist,
         tlist,
         alpha1,
@@ -67,6 +74,7 @@ int main()
         q);
 
     TST.full_solve();
+    TST.print_D();
     TST.print_solution();
 
     return 0;

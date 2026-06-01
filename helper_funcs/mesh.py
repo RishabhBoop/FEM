@@ -14,12 +14,12 @@ def get_plist_tlist_from_gmsh(meshname):
     return plist, tlist
 
 
-def get_boundaries(meshname):
+def get_boundaries(meshname, group_tag=99):
     gmsh.initialize()
     gmsh.open(meshname)
     # Get all boundary nodes (those on the edges of the surface)
-    entities = gmsh.model.getEntitiesForPhysicalGroup(1, 99)
-    # print("Entities in Physical Group 99 (Boundary Edges):", entities)
+    entities = gmsh.model.getEntitiesForPhysicalGroup(1, group_tag)
+    # print(f"Entities in Physical Group {group_tag} (Boundary Edges):", entities)
     # Get nodes from those entities
     boundary_node_tags = set()
     for edge_tag in entities:
@@ -30,3 +30,23 @@ def get_boundaries(meshname):
 
     gmsh.finalize()
     return dr
+
+
+def get_boundary_edges(meshname, group_tag=99):
+    gmsh.initialize()
+    gmsh.open(meshname)
+
+    entities = gmsh.model.getEntitiesForPhysicalGroup(1, group_tag)
+    edges = []
+
+    for edge_tag in entities:
+        element_types, _, element_nodes = gmsh.model.mesh.getElements(1, edge_tag)
+        for elem_type, nodes in zip(element_types, element_nodes):
+            _, _, _, num_nodes, _, _ = gmsh.model.mesh.getElementProperties(elem_type)
+            nodes = np.array(nodes, dtype=int).reshape(-1, num_nodes)
+            # Use the first two nodes as the line endpoints (works for linear and higher-order lines).
+            for n0, n1 in nodes[:, :2]:
+                edges.append([n0 - 1, n1 - 1])
+
+    gmsh.finalize()
+    return np.array(edges, dtype=int)

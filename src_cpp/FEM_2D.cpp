@@ -3,8 +3,8 @@
 using namespace std;
 
 FEM_2D::FEM_2D(
-    Vector xD,
-    Vector xR,
+    VectorINT dr,
+    MatrixINT rr,
     Matrix plist,
     MatrixINT tlist,
     function<double(double, double)> alpha1,
@@ -13,8 +13,8 @@ FEM_2D::FEM_2D(
     function<double(double, double)> f,
     function<double(double, double)> phi,
     function<double(double, double)> gamma,
-    function<double(double, double)> q) : xD(xD),
-                                          xR(xR),
+    function<double(double, double)> q) : dr(dr),
+                                          rr(rr),
                                           plist(plist),
                                           tlist(tlist),
                                           alpha1(alpha1),
@@ -25,6 +25,13 @@ FEM_2D::FEM_2D(
                                           gamma(gamma),
                                           q(q)
 {
+    is_dirichlet.resize(plist.rows(), false);
+    for (int i = 0; i < dr.size(); ++i)
+    {
+        int idx = dr(i);
+        if (idx >= 0 && idx < plist.rows())
+            is_dirichlet[idx] = true;
+    }
 }
 
 Vector FEM_2D::gen_b(const Vector &y) const
@@ -129,15 +136,13 @@ tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_
 
 void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12, Vector &K13, Vector &K23, Vector &D1)
 {
-    vector<int> node_to_matrix(plist.rows(), -1); // list of size plist, initialized to -1 (indicating Randwert nodes); holds
+    vector<int> node_to_matrix(plist.rows(), -1); // list of size plist, initialized to -1 (indicating Randwert nodes); holds mapping from global node index to matrix index
     int free_count = 0;                           // count of free nodes (unknowns); This will be the size of the matrix and D vector after assembly
     for (int i = 0; i < plist.rows(); ++i)
     {
         // If not in xD, it's a free node (unknown)
-        if (find(xD.begin(), xD.end(), plist(i, 0)) == xD.end())
-        {
+        if (!is_dirichlet[i])
             node_to_matrix[i] = free_count++; // assign matrix index and increment free count
-        }
     }
 
     D = Vector::Zero(free_count);            // Initialize D vector with correct size and zeroes
@@ -208,6 +213,73 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
         }
     }
 
+    // Apply robin boundary conditions
+    for (int i = 0; i < rr.rows(); ++i)
+    {
+        int m0 = node_to_matrix[rr(i, 0)];
+        int m1 = node_to_matrix[rr(i, 1)];
+
+        printf("Robin edge between [%d, %d]\n", rr(i, 0), rr(i, 1));
+
+        // Skip if both nodes are Dirichlet
+        if (m0 == -1 && m1 == -1)
+            continue;
+
+        pair<double, double> p0 = {plist(rr(i, 0), 0), plist(rr(i, 0), 1)};
+        pair<double, double> p1 = {plist(rr(i, 1), 0), plist(rr(i, 1), 1)};
+
+        double mid_x = (p0.first + p1.first) / 2.0;
+        double mid_y = (p0.second + p1.second) / 2.0;
+        double edge_length = sqrt(pow(p1.first - p0.first, 2) + pow(p1.second - p0.second, 2));
+
+        printf("\tMidpoint: (%f, %f), LE: %f\n", mid_x, mid_y, edge_length);
+
+        double gamma_val = gamma(mid_x, mid_y);
+        double q_val = q(mid_x, mid_y);
+
+        printf("\tGamma(x_M, y_M): %f, q(x_M, y_M): %f\n", gamma_val, q_val);
+
+        double gamma_val_11 = gamma_val * edge_length / 3.0;
+        double gamma_val_12 = gamma_val * edge_length / 6.0;
+        double q_val_contribution = q_val * edge_length / 2.0;
+
+        printf("\tGamma_11 = %f, Gamma_12 = %f, q = %f\n", gamma_val_11, gamma_val_12, q_val_contribution);
+
+        // Node 0 contributions
+        if (m0 != -1)
+        {
+            triplets.emplace_back(m0, m0, gamma_val_11);
+            D(m0) += q_val_contribution;
+            if (m1 != -1)
+            {
+                triplets.emplace_back(m0, m1, gamma_val_12);
+            }
+            else
+            {
+                // m1 is Dirichlet, move its contribution to D
+                double phi_value = phi(plist(rr(i, 1), 0), plist(rr(i, 1), 1));
+                D(m0) -= gamma_val_12 * phi_value;
+            }
+        }
+
+        // Node 1 contributions
+        if (m1 != -1)
+        {
+            triplets.emplace_back(m1, m1, gamma_val_11);
+            D(m1) += q_val_contribution;
+            if (m0 != -1)
+            {
+                triplets.emplace_back(m1, m0, gamma_val_12);
+            }
+            else
+            {
+                // m0 is Dirichlet, move its contribution to D
+                double phi_value = phi(plist(rr(i, 0), 0), plist(rr(i, 0), 1));
+                D(m1) -= gamma_val_12 * phi_value;
+            }
+        }
+    }
+
     K.resize(free_count, free_count);
     K.setFromTriplets(triplets.begin(), triplets.end());
 }
@@ -242,16 +314,13 @@ void FEM_2D::reconstruct_solution()
     int free_index = 0;
     for (int i = 0; i < plist.rows(); ++i)
     {
-        if (find(xD.begin(), xD.end(), plist(i, 0)) != xD.end())
+        if (is_dirichlet[i])
         {
-            // Dirichlet boundary node
             Sol(i) = phi(plist(i, 0), plist(i, 1));
         }
         else
         {
-            // Free node, get solution from Sol_noRW
-            Sol(i) = Sol_noRW(free_index);
-            free_index++;
+            Sol(i) = Sol_noRW(free_index++);
         }
     }
 }
@@ -264,6 +333,17 @@ void FEM_2D::print_solution()
     for (int i = 0; i < plist.rows(); ++i)
     {
         cout << Sol(i) << " ";
+    }
+    cout << ")" << endl;
+}
+
+void FEM_2D::print_D()
+{
+    cout << "Load vector D:" << endl;
+    cout << " D = (";
+    for (int i = 0; i < D.size(); ++i)
+    {
+        cout << D(i) << " ";
     }
     cout << ")" << endl;
 }
@@ -304,6 +384,12 @@ Vector FEM_2D::get_Solution()
 {
     // Return Sol for pybind11
     return Sol;
+}
+
+Vector FEM_2D::get_D()
+{
+    // Return D for pybind11
+    return D;
 }
 
 tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_error)

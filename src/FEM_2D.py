@@ -67,7 +67,10 @@ def dummy_pass():
     dummy_K13 = np.zeros(1)
     dummy_K23 = np.zeros(1)
     dummy_D1 = np.zeros((1, 1))
-    vec_sort_into_matrix(dummy_plist, dummy_tlist, dummy_K11, dummy_K22, dummy_K33, dummy_K12, dummy_K13, dummy_K23, dummy_D1)
+    vec_sort_into_matrix(
+        dummy_plist, dummy_tlist, dummy_K11, dummy_K22, dummy_K33, dummy_K12, dummy_K13, dummy_K23, dummy_D1
+    )
+
 
 def gen_b(y):
     # Slice the nodes (columns)
@@ -136,8 +139,8 @@ class FEM_2D:
         self.xD = xD
         self.plist = plist
         self.tlist = tlist
-        
-        # Find all points whose x-coordinate is present in xD 
+
+        # Find all points whose x-coordinate is present in xD
         self.randelemente = np.where(np.isin(self.plist[:, 0], self.xD))[0].tolist()
 
         # --- Data needed to solve ---
@@ -216,10 +219,28 @@ class FEM_2D:
     def apply_robin_boundary_conditions(self):
         """
         Applies the Robin boundary conditions to the K matrix and D vector according to the randelemente list.
-        RIGHT NOW: NOT IMPLEMENTED FOR 2D
         """
-        pass
+        for re in self.randelemente:
+            p0 = self.plist[re[0]]
+            p1 = self.plist[re[1]]
 
+            mid = 0.5 * (p0 + p1)
+            length = np.linalg.norm(p1 - p0)
+
+            gamma_val = self.gamma(mid[0], mid[1])
+            q_val = self.q(mid[0], mid[1])
+
+            gamma_val_11 = gamma_val * length / 3
+            gamma_val_12 = gamma_val * length / 6
+            q_val_1 = q_val * length / 2
+
+            self.K[re[0], re[0]] += gamma_val_11
+            self.K[re[1], re[1]] += gamma_val_11
+            self.K[re[0], re[1]] += gamma_val_12
+            self.K[re[1], re[0]] += gamma_val_12
+
+            self.D[re[0]] += q_val_1
+            self.D[re[1]] += q_val_1
 
     def apply_dirichlet_boundary_conditions(self):
         """
@@ -230,8 +251,12 @@ class FEM_2D:
             self.D -= self.K[:, re] * phi_val
 
         # wegstreichen
-        self.K = np.delete(self.K, [re for re in self.randelemente], axis=1)  # Spalte von Rand a und b in der K-Matrix wegstreichen
-        self.K = np.delete(self.K, [re for re in self.randelemente], axis=0)  # Zeile von Rand a in der K-Matrix wegstreichen
+        self.K = np.delete(
+            self.K, [re for re in self.randelemente], axis=1
+        )  # Spalte von Rand a und b in der K-Matrix wegstreichen
+        self.K = np.delete(
+            self.K, [re for re in self.randelemente], axis=0
+        )  # Zeile von Rand a in der K-Matrix wegstreichen
 
         self.D = np.delete(self.D, [re for re in self.randelemente])  # Rand a in D Vector wegstreichen
         return self.K, self.D
@@ -300,9 +325,9 @@ class FEM_2D:
         self.sort_into_matrix(K11, K22, K33, K12, K13, K23, D1)
         t_sort = (time.time() - t1) * 1000.0
 
-        # t1 = time.time()
-        # self.apply_robin_boundary_conditions()
-        # t_robin = (time.time() - t1) * 1000.0
+        t1 = time.time()
+        self.apply_robin_boundary_conditions()
+        t_robin = (time.time() - t1) * 1000.0
 
         t1 = time.time()
         self.apply_dirichlet_boundary_conditions()
@@ -311,8 +336,8 @@ class FEM_2D:
         t_assemble = (time.time() - t_assemble_start) * 1000.0
         timings.append(("assemble_matrix", t_assemble))
         timings.append(("  |- sort_into_matrix", t_sort))
-        # timings.append(("  |- apply_robin_BCs", t_robin))
-        timings.append(("  L apply_dirichlet_BCs", t_dirich))
+        timings.append(("  |- apply_robin_BCs", t_robin))
+        timings.append(("  |- apply_dirichlet_BCs", t_dirich))
 
         t1 = time.time()
         self.solve_LGS()
