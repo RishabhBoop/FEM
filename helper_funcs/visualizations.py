@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
+from helper_funcs.colors import Colors as colors
 
 def print_timings(timings, title="TIMING - C++ full_solve()", n_plist=None, n_tlist=None, save_to_file=False, backend=None, export_filename=None, fem_2d=False, lc=None):
     """
@@ -77,8 +78,7 @@ def print_timings(timings, title="TIMING - C++ full_solve()", n_plist=None, n_tl
             f.write(f" {tot_str}\n")
 
   
-
-def print_error_stats(error_stats, title="Validierung", n_tlist=None, save_to_file=False, backend=None, export_filename=None):
+def print_error_stats(error_stats, title="Validierung", n_tlist=None, save_to_file=False, backend=None, export_filename=None, ERROR_TOLERANCE=1e-12):
     """
     Prints the maximum, minimum, and mean absolute error from the C++ validation.
     """
@@ -86,7 +86,7 @@ def print_error_stats(error_stats, title="Validierung", n_tlist=None, save_to_fi
     max_err, min_err, mean_err = error_stats
 
     if n_tlist is not None:
-        title_raw = f"Abweichungen für {title} ({n_tlist} Elemente):"
+        title_raw = f"Abweichungen für {title} ({n_tlist} Elemente, Maximale Abweichung {ERROR_TOLERANCE}):"
     else:
         title_raw = f"Abweichungen für {title}:"
 
