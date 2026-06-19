@@ -388,7 +388,8 @@ tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_er
 {
     if (Sol.size() != sol_tst.size())
     {
-        throw runtime_error("Validation failed: Solution size does not match test solution size.");
+        string error_msg = "Validation failed: Solution size (" + to_string(Sol.size()) + ") does not match test solution size (" + to_string(sol_tst.size()) + ").";
+        throw runtime_error(error_msg);
     }
 
     Vector error = Sol - sol_tst;
