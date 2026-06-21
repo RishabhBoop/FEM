@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
+requires = ["scikit-build-core", "nanobind"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -7,13 +7,14 @@ name = "fem-project"
 version = "0.2.0"
 description = "FEM project"
 dependencies = [
-"numpy",
+    "numpy",
     "matplotlib",
     "scipy",
     "numba",
     "gmsh",
     "meshpy",
-    "pandas"
+    "pandas",
+    "nanobind",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,91 @@
+#include <nanobind/nanobind.h>
+#include <nanobind/eigen/dense.h>  // Eigen dense <-> numpy
+#include <nanobind/eigen/sparse.h> // Eigen sparse support
+#include <nanobind/stl/function.h> // std::function <-> Python callable
+#include <nanobind/stl/vector.h>   // std::vector <-> Python list
+#include <nanobind/stl/tuple.h>    // std::tuple <-> Python tuple
+#include <nanobind/stl/string.h>   // std::string <-> Python str
+#include "FEM_1D.hpp"
+#include "FEM_2D.hpp"
+
+#ifndef MODULE_NAME
+    #define MODULE_NAME fem_cpp
+#endif
+
+
+namespace nb = nanobind;
+using namespace nb::literals; // for "_a" arg literals
+using namespace std;
+
+NB_MODULE(MODULE_NAME, m)
+{
+    nb::class_<FEM_1D>(m, "FEM_1D")
+        .def(nb::init<
+             Vector,
+             Vector,
+             Vector,
+             function<double(double)>,
+             function<double(double)>,
+             function<double(double)>,
+             function<double(double)>,
+             function<double(double)>,
+             function<double(double)>>())
+        .def_rw("RESOLUTION", &FEM_1D::RESOLUTION)
+        .def("gen_tlist", &FEM_1D::gen_tlist,
+             "Generate the tlist based on the plist")
+        .def("gen_K11_K12_D1", &FEM_1D::gen_K11_K12_D1,
+             "Generate the K11, K12, and D1 vectors for each element")
+        .def("assemble_matrix", &FEM_1D::assemble_matrix,
+             "Assemble the global stiffness matrix K and load vector D",
+             "K11"_a, "K12"_a, "D1"_a)
+        .def("solve_LGS", &FEM_1D::solve_LGS,
+             "Solve the linear system K * Sol_noRW = D")
+        .def("reconstruct_solution", &FEM_1D::reconstruct_solution,
+             "Reconstruct the full solution vector Sol")
+        .def("full_solve", &FEM_1D::full_solve,
+             "Run the full FEM solve process")
+        .def("get_Solution", &FEM_1D::get_Solution,
+             "Get the solution vector Sol as a NumPy array")
+        .def("validate_sol", &FEM_1D::validate_sol,
+             "Validate against an analytical solution, returning errors");
+
+    nb::class_<FEM_2D>(m, "FEM_2D")
+        .def(nb::init<
+             VectorINT,
+             MatrixINT,
+             Matrix,
+             MatrixINT,
+             function<double(double, double)>,
+             function<double(double, double)>,
+             function<double(double, double)>,
+             function<double(double, double)>,
+             function<double(double, double)>,
+             function<double(double, double)>,
+             function<double(double, double)>>())
+        .def_rw("RESOLUTION", &FEM_2D::RESOLUTION)
+        .def("gen_b", &FEM_2D::gen_b,
+             "Generate b from a vector")
+        .def("gen_c", &FEM_2D::gen_c,
+             "Generate c from a vector")
+        .def("gen_delta_E", &FEM_2D::gen_delta_E,
+             "Generate delta_E")
+        .def("gen_local_matrices", &FEM_2D::gen_local_matrices,
+             "Generate local matrices")
+        .def("assemble_matrix", &FEM_2D::assemble_matrix,
+             "Assemble the global stiffness matrix and load vector",
+             "K11"_a, "K22"_a, "K33"_a, "K12"_a, "K13"_a, "K23"_a, "D1"_a)
+        .def("solve_LGS", &FEM_2D::solve_LGS,
+             "Solve the linear system")
+        .def("reconstruct_solution", &FEM_2D::reconstruct_solution,
+             "Reconstruct the full solution vector")
+        .def("full_solve", &FEM_2D::full_solve,
+             "Run the full FEM solve process")
+        .def("print_solution", &FEM_2D::print_solution,
+             "Print the computed solution")
+        .def("get_Solution", &FEM_2D::get_Solution,
+             "Get the solution vector as a NumPy array")
+        .def("get_D", &FEM_2D::get_D,
+             "Get the load vector D as a NumPy array")
+        .def("validate_sol", &FEM_2D::validate_sol,
+             "Validate against an analytical solution");
+}
