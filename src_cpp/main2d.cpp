@@ -74,7 +74,6 @@ int main()
         q);
 
     TST.full_solve();
-    TST.print_D();
     TST.print_solution();
 
     return 0;
