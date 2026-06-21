@@ -1,36 +1,105 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(FEM LANGUAGES C CXX)
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set MKL directory
-# set(MKL_DIR /opt/intel/oneapi/mkl/2026.0/lib/cmake/mkl)
+# --- Optional MKL support ––––––––––––––––––––––––––––––––––––––––––––––––––––––
+set(MKL_DIR /opt/intel/oneapi/mkl/2026.0/lib/cmake/mkl)
+if (EXISTS ${MKL_DIR}/MKLConfig.cmake)
+    find_package(MKL CONFIG)
+else()
+    message(WARNING "MKL not found at ${MKL_DIR}. MKL targets will be skipped.")
+endif()
 
-# Find the Eigen library
+# --- Python and nanobind –––––––––––––––––––––––––––––––––––––––––––––––––––––––
+if (CMAKE_VERSION VERSION_LESS 3.18)
+    set(DEV_MODULE Development)
+else()
+    set(DEV_MODULE Development.Module)
+endif()
+find_package(Python 3.9 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+        "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+# --- Eigen3 and nanobind –––––––––––––––––––––––––––––––––––––––––––––––––––––––
 find_package(Eigen3 REQUIRED)
-find_package(pybind11 REQUIRED)
 
-# Find Intel MKL
-# find_package(MKL CONFIG REQUIRED)
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
+if (nanobind_ROOT)
+    set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${nanobind_ROOT})
+else()
+    message(FATAL_ERROR "nanobind not found.")
+endif()
+find_package(nanobind CONFIG REQUIRED)
 
-# Set the output directory for the executables and shared libraries
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(fem_1d_app src_cpp/main.cpp src_cpp/FEM_1D.cpp)
+# --- Configure a target with Eigen and optionally MKL –––––––––––––––––––––––––––
+# Usage: configure_eigen_target(<target> [MKL])
+function(configure_eigen_target TARGET)
+    target_link_libraries(${TARGET} PRIVATE Eigen3::Eigen)
+    if ("MKL" IN_LIST ARGN)
+        if (MKL_FOUND)
+            target_compile_definitions(${TARGET} PRIVATE USE_MKL)
+            target_link_libraries(${TARGET} PRIVATE MKL::MKL)
+        else()
+            message(WARNING "MKL requested for '${TARGET}' but not found.")
+        endif()
+    endif()
+endfunction()
+
+# --- Build targets; No MKL ---
+add_executable(fem_1d_app src_cpp/main.cpp   src_cpp/FEM_1D.cpp)
 add_executable(fem_2d_app src_cpp/main2d.cpp src_cpp/FEM_2D.cpp)
+nanobind_add_module(
+  fem_cpp 
+  src_cpp/nano_binding.cpp 
+  src_cpp/FEM_1D.cpp 
+  src_cpp/FEM_2D.cpp
+)
 
-pybind11_add_module(fem_cpp src_cpp/binding.cpp src_cpp/FEM_1D.cpp src_cpp/FEM_2D.cpp)
+configure_eigen_target(fem_1d_app)
+configure_eigen_target(fem_2d_app)
+configure_eigen_target(fem_cpp)
 
-# Link Eigen to your project
-target_link_libraries(fem_1d_app PRIVATE Eigen3::Eigen)
-target_link_libraries(fem_2d_app PRIVATE Eigen3::Eigen)
-target_link_libraries(fem_cpp PRIVATE Eigen3::Eigen)
+install(TARGETS fem_cpp DESTINATION ".")
+nanobind_add_stub(
+  fem_cpp_stub 
+  MODULE fem_cpp 
+  OUTPUT fem_cpp.pyi
+  PYTHON_PATH "."
+  DEPENDS fem_cpp
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fem_cpp.pyi DESTINATION .)
 
-# # Enable Eigen to use MKL
-# target_compile_definitions(fem_app PRIVATE EIGEN_USE_MKL_ALL)
-# target_compile_definitions(fem_cpp PRIVATE EIGEN_USE_MKL_ALL)
+# --- Build targets; MKL variants ---
+option(BUILD_MKL_TARGETS "Build the MKL-accelerated variants" OFF)
 
-# install for python
-install(TARGETS fem_cpp DESTINATION .)
+if (BUILD_MKL_TARGETS)
+    add_executable(fem_1d_app_mkl src_cpp/main.cpp   src_cpp/FEM_1D.cpp)
+    add_executable(fem_2d_app_mkl src_cpp/main2d.cpp src_cpp/FEM_2D.cpp)
+    nanobind_add_module(fem_cpp_mkl src_cpp/nano_binding.cpp src_cpp/FEM_1D.cpp src_cpp/FEM_2D.cpp)
+
+    configure_eigen_target(fem_1d_app_mkl MKL)
+    configure_eigen_target(fem_2d_app_mkl MKL)
+    configure_eigen_target(fem_cpp_mkl    MKL)
+    target_compile_definitions(fem_cpp_mkl PRIVATE MODULE_NAME=fem_cpp_mkl)
+
+    install(TARGETS fem_cpp_mkl DESTINATION . OPTIONAL)
+    nanobind_add_stub(
+      fem_cpp_mkl_stub 
+      MODULE fem_cpp_mkl 
+      OUTPUT fem_cpp_mkl.pyi
+      PYTHON_PATH "."
+      DEPENDS fem_cpp_mkl
+    )
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fem_cpp_mkl.pyi DESTINATION . OPTIONAL)
+endif()
+

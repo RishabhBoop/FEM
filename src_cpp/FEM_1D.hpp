@@ -1,6 +1,8 @@
 #pragma once
 
-// #define EIGEN_USE_MKL_ALL
+#if USE_MKL
+#define EIGEN_USE_MKL_ALL
+#endif
 
 #include <iostream>
 #include <Eigen/Dense>
