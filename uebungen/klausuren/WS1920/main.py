@@ -34,8 +34,13 @@ param_lls = 0.001
 param_sd = 0.005
 param_SH = 0.01
 
-param_M0 = 1.0  # Magnetization of the magnet
-param_j0 = 100.0  # Current density in the spules
+param_M0 = 0.0  # Magnetization of the magnet
+param_I1 = 1.0  # Current in Spule 1
+param_I2 = 0.0  # Current in Spule 2 and 3
+param_mu1 = 10.0  # Permeability of material 1
+param_mu2 = 10.0  # Permeability of material 2
+
+MU0 = 4 * np.pi * 1e-7
 
 
 # ------------------------------------------------------------------------------
@@ -43,16 +48,33 @@ param_j0 = 100.0  # Current density in the spules
 def alpha1(r, z):
     if r == 0:
         return 0.0
-    mu = 10
-    return 1 / (10 * r)
+    in_outer_box = (r <= param_Bm - param_dd) and (z >= -param_Hm / 2) and (z <= param_Hm / 2)
+    in_inner_hole = (
+        (r > param_dd)
+        and (r < param_Bm - param_dd)
+        and (z > -param_Hm / 2 + param_dd)
+        and (z < param_Hm / 2 - param_dd)
+    )
+    in_mat_1 = in_outer_box and not in_inner_hole
+
+    in_mat_2_r_axis = param_Bm - param_dd <= r <= param_Bm
+    in_mat_2_z_axis = -param_Hm / 2 <= z <= param_Hm / 2
+    in_mat_2 = in_mat_2_r_axis and in_mat_2_z_axis
+
+    if in_mat_1:
+        mu_r = param_mu1
+    elif in_mat_2:
+        mu_r = param_mu2
+    else:
+        mu_r = 1.0
+
+    mu = MU0 * mu_r
+    return 1 / (mu * r)
 
 
 @cfunc(sig=float64(float64, float64))
 def alpha2(r, z):
-    if r == 0:
-        return 0.0
-    mu = 10
-    return 1 / (10 * r)
+    return alpha1(r, z)
 
 
 @cfunc(sig=float64(float64, float64))
@@ -64,8 +86,39 @@ def beta(r, z):
 
 @cfunc(sig=float64(float64, float64))
 def f(r, z):
-    val = -param_M0 * 12 / param_ma * (2 * (-param_rm0) / param_ma) ** 5 * (1 - (2 * (z - param_zmo) / param_mb) ** 6)
-    val1 = -param_M0 * 12 / param_mb * (1 - (2 * (z - param_rm0) / param_ma) ** 6) * (2 * (-param_zmo) / param_mb) ** 5
+    param_j0_I1 = param_I1 / (2 * param_SH * param_sd)  # CJ = I/A, Stromdichte in der Spule
+    param_j0_I2 = param_I2 / (param_SH * param_sd)  # CJ = I/A, Stromdichte in der Spule
+
+    # check if in spule 1
+    in_spule_1_r_axis = param_dd + param_lls <= r <= param_dd + param_lls + param_sd
+    in_spule_1_z_axis = -param_SH <= z <= param_SH
+    in_spule_1 = in_spule_1_r_axis and in_spule_1_z_axis
+
+    # check if in spule 2
+    in_spule_2_r_axis = param_Bm - param_dd - param_lls - param_sd <= r <= param_Bm - param_dd - param_lls
+    in_spule_2_z_axis = -param_SH / 2 <= z <= param_SH / 2
+    in_spule_2 = in_spule_2_r_axis and in_spule_2_z_axis
+
+    # check if in spule 3
+    in_spule_3_r_axis = param_Bm + param_lls <= r <= param_Bm + param_lls + param_sd
+    in_spule_3_z_axis = -param_SH / 2 <= z <= param_SH / 2
+    in_spule_3 = in_spule_3_r_axis and in_spule_3_z_axis
+
+    if in_spule_1:
+        param_j0 = param_j0_I1
+    elif in_spule_2:
+        param_j0 = param_j0_I2
+    elif in_spule_3:
+        param_j0 = -param_j0_I2
+    else:
+        param_j0 = 0.0
+
+    val = (
+        -param_M0 * 12 / param_ma * (2 * (r - param_rm0) / param_ma) ** 5 * (1 - (2 * (z - param_zmo) / param_mb) ** 6)
+    )
+    val1 = (
+        -param_M0 * 12 / param_mb * (1 - (2 * (r - param_rm0) / param_ma) ** 6) * (2 * (z - param_zmo) / param_mb) ** 5
+    )
     return param_j0 + val + val1
 
 
@@ -73,25 +126,39 @@ def f(r, z):
 def gamma(r, z):
     if r == 0:
         return 0.0
-    mu = 10
-    return 1 / (mu * r)
+
+    in_outer_box = (r <= param_Bm - param_dd) and (z >= -param_Hm / 2) and (z <= param_Hm / 2)
+    in_inner_hole = (
+        (r > param_dd)
+        and (r < param_Bm - param_dd)
+        and (z > -param_Hm / 2 + param_dd)
+        and (z < param_Hm / 2 - param_dd)
+    )
+    in_mat_1 = in_outer_box and not in_inner_hole
+
+    in_mat_2_r_axis = param_Bm - param_dd <= r <= param_Bm
+    in_mat_2_z_axis = -param_Hm / 2 <= z <= param_Hm / 2
+    in_mat_2 = in_mat_2_r_axis and in_mat_2_z_axis
+
+    if in_mat_1:
+        mu = MU0 * param_mu1
+    elif in_mat_2:
+        mu = MU0 * param_mu2
+    else:
+        mu = MU0
+
+    val = 1 / (mu * r * np.sqrt(r**2 + z**2))
+    return val
 
 
 @cfunc(sig=float64(float64, float64))
 def phi(r, z):
-    if r == 0:
-        return 0.0
-    mu = 10
-    return 1 / (mu * r)
+    return 0.0
 
 
 @cfunc(sig=float64(float64, float64))
 def q(r, z):
-    if r == 0:
-        return 0.0
-    mu = 10
-    val = -1 / (mu * r * np.sqrt(r**2 + z**2))
-    return val
+    return 0.0
 
 
 # ------------------------------------------------------------------------------
@@ -236,7 +303,7 @@ def gen_mesh():
     gmsh.model.mesh.field.setNumbers(dist_tag, "CurvesList", tags_to_refine)
     gmsh.model.mesh.field.setNumber(dist_tag, "Sampling", 100)
     math_tag = gmsh.model.mesh.field.add("MathEval")
-    formula = f"0.0005 + 0.5 * F{dist_tag}"  # 0.0005 is the minimum element size, 0.5 controls how fast the size grows with distance
+    formula = f"0.0005 + 0.1 * F{dist_tag}"  # 0.0005 is the minimum element size, 0.5 controls how fast the size grows with distance
     gmsh.model.mesh.field.setString(math_tag, "F", formula)
     gmsh.model.mesh.field.setAsBackgroundMesh(math_tag)
 
@@ -294,14 +361,26 @@ if __name__ == "__main__":
 
     plist = netz.points.astype(np.float64)
     tlist = netz.Triangle.elements.astype(np.int32)
-    dd = netz.Semicircle.elements.astype(np.int32).reshape(-1, 1)
-    rr = np.vstack(
-        (netz.Material2Boundary.elements.astype(np.int32), netz.SymmetryBoundary.elements.astype(np.int32))
-    )
+    rr = netz.Semicircle.elements.astype(np.int32)
+    dd = netz.SymmetryBoundary.elements.astype(np.int32).reshape(-1, 1)
     solver = fem_cpp.FEM_2D(dd, rr, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, q)
     timing = solver.full_solve()
     sol = solver.get_Solution()
-    visualize_solution(plist, tlist, sol, False, "Lösung 2D", False, "CPP", f"Loesung2D_{len(plist)}points.png")
+    my_ax = visualize_solution(plist, tlist, sol, False, "Lösung 2D", False, "CPP", f"Loesung2D_{len(plist)}points.png")
     print_timings(timing, "FEM 2D Timings", len(plist), len(tlist), False, "CPP")
+
+    # netz.Triangle.plot(ax=my_ax, color="gray", alpha=0.2)
+
+    # outlines
+    netz.Material1Boundary.plot(ax=my_ax, color="pink")
+    netz.Material2Boundary.plot(ax=my_ax, color="purple")
+    netz.Spule1Boundary.plot(ax=my_ax, color="blue")
+    netz.Spule2Boundary.plot(ax=my_ax, color="green")
+    netz.Spule3Boundary.plot(ax=my_ax, color="red")
+    netz.Linie1.plot(ax=my_ax, color="cyan")
+    netz.Linie2.plot(ax=my_ax, color="magenta")
+    netz.SymmetryBoundary.plot(ax=my_ax, color="black")
+    netz.Semicircle.plot(ax=my_ax, color="black")
+
     # plt.axis("equal")
     plt.show()
