@@ -68,9 +68,7 @@ public:
         function<double(double, double)> f,
         function<double(double, double)> phi,
         function<double(double, double)> gamma,
-        function<double(double, double)> q
-    );
-
+        function<double(double, double)> q);
 
     Vector gen_b(const Vector &) const;
     Vector gen_c(const Vector &) const;
@@ -88,11 +86,16 @@ public:
 
     void print_solution();
 
-    void print_D();
-
-    Vector get_Solution();
-
-    Vector get_D();
+    // getter functions for all member variables
+    VectorINT get_dr() { return dr; };
+    MatrixINT get_rr() { return rr; };
+    vector<int> get_Randelemente() { return Randelemente; };
+    Matrix get_plist() { return plist; };
+    MatrixINT get_tlist() { return tlist; };
+    Eigen::SparseMatrix<double> get_K() { return K; };
+    Eigen::VectorXd get_D() { return D; };
+    Eigen::VectorXd get_Sol_noRW() { return Sol_noRW; };
+    Eigen::VectorXd get_Sol() { return Sol; };
 
     tuple<Vector, vector<double>> validate_sol(Vector, double);
 

@@ -377,18 +377,6 @@ vector<tuple<string, double>> FEM_2D::full_solve()
     return timings;
 }
 
-Vector FEM_2D::get_Solution()
-{
-    // Return Sol for pybind11
-    return Sol;
-}
-
-Vector FEM_2D::get_D()
-{
-    // Return D for pybind11
-    return D;
-}
-
 tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_error)
 {
     if (Sol.size() != sol_tst.size())
