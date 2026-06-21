@@ -13,6 +13,8 @@ from helper_funcs.mesh import get_plist_tlist_from_gmsh, get_boundaries, get_bou
 
 from helper_funcs.gmshtools import ElementMsh, MshHs
 
+import os.path as path
+
 current_dir = path.dirname(path.abspath(__file__))
 # current_dir = current_dir + "/../validations"
 tst_data_dir = f"{current_dir}/tst_2D"
@@ -292,30 +294,30 @@ def a1_c():
     netz.DirichletBoundary.plot(color="red")
     netz.RobinBoundary.plot(color="orange")
 
-    # plist = netz.points.astype(np.float64)
-    # tlist = netz.Triangle.elements.astype(np.int32)
+    plist = netz.points.astype(np.float64)
+    tlist = netz.Triangle.elements.astype(np.int32)
 
-    # # Dirichlet boundaries (Nodes) -> must shape to 2D column grid [m, 1]
-    # dr = netz.DirichletBoundary.nodes.astype(np.int32).reshape(-1, 1)
+    # Dirichlet boundaries (Nodes) -> must shape to 2D column grid [m, 1]
+    dr = netz.DirichletBoundary.nodes.astype(np.int32).flatten()
 
-    # # Robin boundaries (Line Elements) -> 2D grid matrix [m, 2]
-    # rr = netz.RobinBoundary.elements.astype(np.int32)
+    # Robin boundaries (Line Elements) -> 2D grid matrix [m, 2]
+    rr = netz.RobinBoundary.elements.astype(np.int32)
 
-    # fem_solver = fem_cpp.FEM_2D(dr, rr, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, q)
-    # try:
-    #     timings = fem_solver.full_solve()
-    #     sol = fem_solver.get_Solution()
-    #     visualize_solution(
-    #         plist, tlist, sol, False, "Lösung 2D Validierung", False, "CPP", f"Loesung2D_{len(plist)}points_sol.png"
-    #     )
-    #     print_timings(timings, "FEM 2D Validierung Timings", len(plist), len(tlist), False, "CPP")
-    # except RuntimeError as e:
-    #     print(f"Validierung von Lösung A fehlgeschlagen: {e}")
-    #     return
+    fem_solver = fem_cpp.FEM_2D(dr, rr, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, q)
+    try:
+        timings = fem_solver.full_solve()
+        sol = fem_solver.get_Solution()
+        visualize_solution(
+            plist, tlist, sol, False, "Lösung 2D Validierung", False, "CPP", f"Loesung2D_{len(plist)}points_sol.png"
+        )
+        print_timings(timings, "FEM 2D Validierung Timings", len(plist), len(tlist), False, "CPP")
+    except RuntimeError as e:
+        print(f"Fehler: {e}")
+        return
 
 
 if __name__ == "__main__":
     # a1_a()
     # a1_b()
-    a1_c()
+    # a1_c()
     plt.show()
