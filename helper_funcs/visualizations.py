@@ -188,3 +188,5 @@ def visualize_solution(plist, tlist, solution, is_3d=True, title="Lösung", save
         if backend:
             export_filename = f"{backend}__{export_filename}"
         plt.savefig(export_filename)
+    
+    return ax
