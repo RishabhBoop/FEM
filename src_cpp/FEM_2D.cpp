@@ -278,7 +278,12 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
 
 void FEM_2D::solve_LGS()
 {
-    Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+// Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+#ifdef USE_MKL
+    Eigen::PardisoLU<SparseMatrix> solver;
+#else
+    Eigen::SparseLU<SparseMatrix> solver;
+#endif
 
     solver.compute(K);
 

@@ -4,13 +4,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Optional MKL support ––––––––––––––––––––––––––––––––––––––––––––––––––––––
-set(MKL_DIR /opt/intel/oneapi/mkl/2026.0/lib/cmake/mkl)
-if (EXISTS ${MKL_DIR}/MKLConfig.cmake)
-    find_package(MKL CONFIG)
-else()
-    message(WARNING "MKL not found at ${MKL_DIR}. MKL targets will be skipped.")
+set(MKL_INTERFACE_FULL "intel_lp64" CACHE STRING "MKL Interface" FORCE)
+find_package(MKL CONFIG)
+if (NOT MKL_FOUND)
+    message(WARNING "MKL not found. MKL targets will be skipped.")
 endif()
-
 # --- Python and nanobind –––––––––––––––––––––––––––––––––––––––––––––––––––––––
 if (CMAKE_VERSION VERSION_LESS 3.18)
     set(DEV_MODULE Development)
@@ -92,7 +90,7 @@ if (BUILD_MKL_TARGETS)
     configure_eigen_target(fem_cpp_mkl    MKL)
     target_compile_definitions(fem_cpp_mkl PRIVATE MODULE_NAME=fem_cpp_mkl)
 
-    install(TARGETS fem_cpp_mkl DESTINATION . OPTIONAL)
+    install(TARGETS fem_cpp_mkl DESTINATION "." OPTIONAL)
     nanobind_add_stub(
       fem_cpp_mkl_stub 
       MODULE fem_cpp_mkl 
