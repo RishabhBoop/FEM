@@ -109,8 +109,8 @@ def gen_2area(p):
 class FEM_2D:
     def __init__(
         self,
-        xD: list,
-        xR: list,
+        dr: np.ndarray,  # Dirichlet boundary nodes (flat array)
+        rr: np.ndarray,  # Robin boundary elements matrix [M x 2]
         plist: np.ndarray,
         tlist: np.ndarray,
         alpha1: Callable,
@@ -135,13 +135,13 @@ class FEM_2D:
             f (Callable): f-part of the partial differential equation
         """
         # --- Data needed to apply Randbedingungen ---
-        self.xR = xR
-        self.xD = xD
+        self.rr = rr
+        self.dr = dr
         self.plist = plist
         self.tlist = tlist
 
         # Find all points whose x-coordinate is present in xD
-        self.randelemente = np.where(np.isin(self.plist[:, 0], self.xD))[0].tolist()
+        self.randelemente = self.dr.tolist()
 
         # --- Data needed to solve ---
         self.K = None
@@ -220,9 +220,10 @@ class FEM_2D:
         """
         Applies the Robin boundary conditions to the K matrix and D vector according to the randelemente list.
         """
-        for re in self.randelemente:
-            p0 = self.plist[re[0]]
-            p1 = self.plist[re[1]]
+        for edge in self.rr:
+            re0, re1 = edge[0], edge[1]
+            p0 = self.plist[re0]
+            p1 = self.plist[re1]
 
             mid = 0.5 * (p0 + p1)
             length = np.linalg.norm(p1 - p0)
@@ -234,13 +235,13 @@ class FEM_2D:
             gamma_val_12 = gamma_val * length / 6
             q_val_1 = q_val * length / 2
 
-            self.K[re[0], re[0]] += gamma_val_11
-            self.K[re[1], re[1]] += gamma_val_11
-            self.K[re[0], re[1]] += gamma_val_12
-            self.K[re[1], re[0]] += gamma_val_12
+            self.K[re0, re0] += gamma_val_11
+            self.K[re1, re1] += gamma_val_11
+            self.K[re0, re1] += gamma_val_12
+            self.K[re1, re0] += gamma_val_12
 
-            self.D[re[0]] += q_val_1
-            self.D[re[1]] += q_val_1
+            self.D[re0] += q_val_1
+            self.D[re1] += q_val_1
 
     def apply_dirichlet_boundary_conditions(self):
         """
@@ -251,14 +252,11 @@ class FEM_2D:
             self.D -= self.K[:, re] * phi_val
 
         # wegstreichen
-        self.K = np.delete(
-            self.K, [re for re in self.randelemente], axis=1
-        )  # Spalte von Rand a und b in der K-Matrix wegstreichen
-        self.K = np.delete(
-            self.K, [re for re in self.randelemente], axis=0
-        )  # Zeile von Rand a in der K-Matrix wegstreichen
+        self.K = np.delete(self.K, self.randelemente, axis=1)  # Spalte von Rand a und b in der K-Matrix wegstreichen
+        self.K = np.delete(self.K, self.randelemente, axis=0)  # Zeile von Rand a in der K-Matrix wegstreichen
+        self.D = np.delete(self.D, self.randelemente)  # Rand a in D Vector wegstreichen
 
-        self.D = np.delete(self.D, [re for re in self.randelemente])  # Rand a in D Vector wegstreichen
+        # self.D = np.delete(self.D, [re for re in self.randelemente])
         return self.K, self.D
 
     def solve_LGS(self):
