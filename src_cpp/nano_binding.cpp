@@ -84,10 +84,24 @@ MY_NB_MODULE(MODULE_NAME, m)
               "Run the full FEM solve process")
          .def("print_solution", &FEM_2D::print_solution,
               "Print the computed solution")
-         .def("get_Solution", &FEM_2D::get_Solution,
-              "Get the solution vector as a NumPy array")
+         .def("get_dr", &FEM_2D::get_dr,
+              "Get the list of Dirichlet nodes as a NumPy array")
+         .def("get_rr", &FEM_2D::get_rr,
+              "Get the list of Robin elements as a NumPy array")
+         .def("get_Randelemente", &FEM_2D::get_Randelemente,
+              "Get the list of boundary elements as a Python list")
+         .def("get_plist", &FEM_2D::get_plist,
+              "Get the list of node coordinates as a NumPy array")
+         .def("get_tlist", &FEM_2D::get_tlist,
+              "Get the list of element connectivity as a NumPy array")
+         .def("get_K", &FEM_2D::get_K,
+              "Get the global stiffness matrix K as a SciPy sparse matrix")
          .def("get_D", &FEM_2D::get_D,
               "Get the load vector D as a NumPy array")
+         .def("get_Sol_noRW", &FEM_2D::get_Sol_noRW,
+              "Get the solution vector before reconstruction")
+         .def("get_Solution", &FEM_2D::get_Sol,
+              "Get the solution vector as a NumPy array")
          .def("validate_sol", &FEM_2D::validate_sol,
               "Validate against an analytical solution");
 }
