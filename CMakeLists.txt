@@ -39,8 +39,7 @@ if (NOT Eigen3_FOUND)
     )
     FetchContent_MakeAvailable(eigen)
     
-    # 3. Create an alias so your target_link_libraries remains identical 
-    # whether Eigen was found locally or fetched.
+    # Create an alias so your target_link_libraries remains identical whether Eigen was found locally or fetched.
     if(NOT TARGET Eigen3::Eigen)
         add_library(Eigen3::Eigen ALIAS eigen)
     endif()
