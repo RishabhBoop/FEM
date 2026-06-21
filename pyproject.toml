@@ -7,10 +7,23 @@ name = "fem-project"
 version = "0.2.0"
 description = "FEM project"
 dependencies = [
-    "numpy",
+"numpy",
     "matplotlib",
     "scipy",
-    "numba"
+    "numba",
+    "gmsh",
+    "meshpy",
+    "pandas"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "autopep8",
+    "ipykernel",
+    "ipympl",
+    "ipywidgets",
+    "pybind11-stubgen"
 ]
 
 [tool.scikit-build]
