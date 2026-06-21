@@ -334,17 +334,6 @@ void FEM_2D::print_solution()
     cout << ")" << endl;
 }
 
-void FEM_2D::print_D()
-{
-    cout << "Load vector D:" << endl;
-    cout << " D = (";
-    for (int i = 0; i < D.size(); ++i)
-    {
-        cout << D(i) << " ";
-    }
-    cout << ")" << endl;
-}
-
 vector<tuple<string, double>> FEM_2D::full_solve()
 {
     auto t1 = chrono::high_resolution_clock::now();
