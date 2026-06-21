@@ -5,11 +5,6 @@ import matplotlib.pyplot as plt
 from numba import cfunc, float64
 import gmsh
 
-import sys
-from os import path
-
-bin_dir = path.abspath(path.join(path.dirname(__file__), "../bin"))
-sys.path.insert(0, bin_dir)
 import fem_cpp
 
 from helper_funcs.colors import Colors as colors
