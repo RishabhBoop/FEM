@@ -31,3 +31,6 @@ target_link_libraries(fem_cpp PRIVATE Eigen3::Eigen)
 # # Enable Eigen to use MKL
 # target_compile_definitions(fem_app PRIVATE EIGEN_USE_MKL_ALL)
 # target_compile_definitions(fem_cpp PRIVATE EIGEN_USE_MKL_ALL)
+
+# install for python
+install(TARGETS fem_cpp DESTINATION .)
