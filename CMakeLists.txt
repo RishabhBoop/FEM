@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project(FEM LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(FetchContent)
 
 # --- Optional MKL support ––––––––––––––––––––––––––––––––––––––––––––––––––––––
 set(MKL_INTERFACE_FULL "intel_lp64" CACHE STRING "MKL Interface" FORCE)
@@ -9,6 +10,7 @@ find_package(MKL CONFIG)
 if (NOT MKL_FOUND)
     message(WARNING "MKL not found. MKL targets will be skipped.")
 endif()
+
 # --- Python and nanobind –––––––––––––––––––––––––––––––––––––––––––––––––––––––
 if (CMAKE_VERSION VERSION_LESS 3.18)
     set(DEV_MODULE Development)
@@ -24,7 +26,26 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # --- Eigen3 and nanobind –––––––––––––––––––––––––––––––––––––––––––––––––––––––
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 QUIET)
+
+if (NOT Eigen3_FOUND)
+    message(STATUS "Eigen3 not found system-wide, fetching from GitLab...")
+    
+    FetchContent_Declare(
+        eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG          3.4.0
+        SYSTEM # Optional: Treats Eigen headers as system headers to suppress warnings
+    )
+    FetchContent_MakeAvailable(eigen)
+    
+    # 3. Create an alias so your target_link_libraries remains identical 
+    # whether Eigen was found locally or fetched.
+    if(NOT TARGET Eigen3::Eigen)
+        add_library(Eigen3::Eigen ALIAS eigen)
+    endif()
+endif()
+message(STATUS "Found Eigen3 at: ${Eigen3_DIR}")
 
 execute_process(
     COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
@@ -78,7 +99,7 @@ nanobind_add_stub(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fem_cpp.pyi DESTINATION .)
 
 # --- Build targets; MKL variants ---
-option(BUILD_MKL_TARGETS "Build the MKL-accelerated variants" OFF)
+option(BUILD_MKL_TARGETS "Build the MKL-accelerated variants" ON)
 
 if (BUILD_MKL_TARGETS)
     add_executable(fem_1d_app_mkl src_cpp/main.cpp   src_cpp/FEM_1D.cpp)
