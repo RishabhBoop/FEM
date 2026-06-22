@@ -31,6 +31,8 @@ num_platten = 4
 
 
 # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+
 def alpha_func(x, y):
     return -complex(SIGMA, OMEGA * EPSILON_0 * EPSILON_R)
 
@@ -56,15 +58,18 @@ def q_func(x, y):
 
 
 # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+
 def boundary_curves(surface_tags):
     """Returns a clean, flat list of unique integer line tags for the given surfaces."""
     dim_tags = [(2, t) for t in surface_tags]
     # getBoundary returns a list of (dim, curve_tag)
     boundary = gmsh.model.getBoundary(dim_tags, oriented=False)
-    
+
     # Extract only the absolute integer ID of the curve
     clean_tags = list(set(tag for dim, tag in boundary if dim == 1))
     return clean_tags
+
 
 def gen_mesh():
     gmsh.initialize()
@@ -159,7 +164,7 @@ def gen_mesh():
 
     # --- fragment the geometry ---
     out_dimtags, out_map = gmsh.model.occ.fragment([(2, circle)], stuff_to_fragment)
-    
+
     # --- Sync ---
     gmsh.model.occ.synchronize()
 
@@ -181,7 +186,9 @@ def gen_mesh():
     for idx, tags in enumerate(plate_blue_tags):
         print(f"--- Processing blue plate {idx + 1} with original tag {tags}...")
         new_tags_plate = new_tags(idx + len(plate_orange_tags))
-        gmsh.model.addPhysicalGroup(2, new_tags_plate, tag=idx + 1 + len(plate_orange_tags), name=f"Plate_{idx + 1 + len(plate_orange_tags)}")
+        gmsh.model.addPhysicalGroup(
+            2, new_tags_plate, tag=idx + 1 + len(plate_orange_tags), name=f"Plate_{idx + 1 + len(plate_orange_tags)}"
+        )
         all_blue_new_tags += new_tags_plate
 
     # dielektrikum
@@ -189,13 +196,17 @@ def gen_mesh():
     for idx, tags in enumerate(dielek_tags):
         print(f"--- Processing dielektrikum {idx + 1} with original tag {tags}...")
         new_tags_dielek = new_tags(idx + len(plate_orange_tags) + len(plate_blue_tags))
-        gmsh.model.addPhysicalGroup(2, new_tags_dielek, tag=idx + 1 + len(plate_orange_tags) + len(plate_blue_tags), name=f"Dielektrikum_{idx + 1}") 
+        gmsh.model.addPhysicalGroup(
+            2,
+            new_tags_dielek,
+            tag=idx + 1 + len(plate_orange_tags) + len(plate_blue_tags),
+            name=f"Dielektrikum_{idx + 1}",
+        )
         all_dielek_new_tags += new_tags_dielek
 
     gmsh.model.addPhysicalGroup(2, all_orange_new_tags, name="OrangePlates")
     gmsh.model.addPhysicalGroup(2, all_blue_new_tags, name="BluePlates")
     gmsh.model.addPhysicalGroup(2, all_dielek_new_tags, name="Dieleks")
-
 
     # orange boundary curves
     orange_boundary_curves = boundary_curves([t for t in plate_orange_tags])
@@ -223,7 +234,6 @@ def gen_mesh():
     formula = f"0.01 + 0.1 * F{dist_tag}"  # 0.0005 is the minimum element size, 0.5 controls how fast the size grows with distance
     gmsh.model.mesh.field.setString(math_tag, "F", formula)
     gmsh.model.mesh.field.setAsBackgroundMesh(math_tag)
-    
 
     # --- Sync ---
     gmsh.model.occ.synchronize()
@@ -243,6 +253,9 @@ def gen_mesh():
     return netz
 
 
+# –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+
 def a1():
     netz = gen_mesh()
     netz.dim = 2
@@ -256,6 +269,7 @@ def a1():
     plt.legend()
 
     plt.axis("equal")
+
 
 if __name__ == "__main__":
     a1()

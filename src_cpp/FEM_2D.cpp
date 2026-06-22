@@ -1,19 +1,19 @@
 #include "FEM_2D.hpp"
 
 using namespace std;
-
-FEM_2D::FEM_2D(
+template <typename Scalar>
+FEM_2D<Scalar>::FEM_2D(
     VectorINT dr,
     MatrixINT rr,
     Matrix plist,
     MatrixINT tlist,
-    function<double(double, double)> alpha1,
-    function<double(double, double)> alpha2,
-    function<double(double, double)> beta,
-    function<double(double, double)> f,
-    function<double(double, double)> phi,
-    function<double(double, double)> gamma,
-    function<double(double, double)> q) : dr(dr),
+    function<Scalar(double, double)> alpha1,
+    function<Scalar(double, double)> alpha2,
+    function<Scalar(double, double)> beta,
+    function<Scalar(double, double)> f,
+    function<Scalar(double, double)> phi,
+    function<Scalar(double, double)> gamma,
+    function<Scalar(double, double)> q) : dr(dr),
                                           rr(rr),
                                           plist(plist),
                                           tlist(tlist),
@@ -34,7 +34,8 @@ FEM_2D::FEM_2D(
     }
 }
 
-Vector FEM_2D::gen_b(const Vector &y) const
+template <typename Scalar>
+Vector FEM_2D<Scalar>::gen_b(const Vector &y) const
 {
     // y = [y1, y2, y3] - y-coords of 3 nodes of one triangle
     Vector result(3);
@@ -44,7 +45,8 @@ Vector FEM_2D::gen_b(const Vector &y) const
     return result;           // Vector of size 3
 }
 
-Vector FEM_2D::gen_c(const Vector &x) const
+template <typename Scalar>
+Vector FEM_2D<Scalar>::gen_c(const Vector &x) const
 {
     // x = [x1, x2, x3] - x-coords of 3 nodes of one triangle
     Vector result(3);
@@ -54,7 +56,8 @@ Vector FEM_2D::gen_c(const Vector &x) const
     return result;           // Vector of size 3
 }
 
-double FEM_2D::gen_delta_E(int p0, int p1, int p2) const
+template <typename Scalar>
+double FEM_2D<Scalar>::gen_delta_E(int p0, int p1, int p2) const
 {
     double deltaE;
 
@@ -70,7 +73,8 @@ double FEM_2D::gen_delta_E(int p0, int p1, int p2) const
     return deltaE / 2.0;
 }
 
-tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_matrices()
+template <typename Scalar>
+tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>> FEM_2D<Scalar>::gen_local_matrices()
 {
     Vector y_coords(3); // Shape: (3) - y(0, 1, 2)
     Vector x_coords(3); // Shape: (3) - x(0, 1, 2)
@@ -134,7 +138,8 @@ tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_
     return {K11, K22, K33, K12, K13, K23, D1};
 }
 
-void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12, Vector &K13, Vector &K23, Vector &D1)
+template <typename Scalar>
+void FEM_2D<Scalar>::assemble_matrix(Eigen::Vector<Scalar, Eigen::Dynamic> &K11, Eigen::Vector<Scalar, Eigen::Dynamic> &K22, Eigen::Vector<Scalar, Eigen::Dynamic> &K33, Eigen::Vector<Scalar, Eigen::Dynamic> &K12, Eigen::Vector<Scalar, Eigen::Dynamic> &K13, Eigen::Vector<Scalar, Eigen::Dynamic> &K23, Eigen::Vector<Scalar, Eigen::Dynamic> &D1)
 {
     vector<int> node_to_matrix(plist.rows(), -1); // list of size plist, initialized to -1 (indicating Randwert nodes); holds mapping from global node index to matrix index
     int free_count = 0;                           // count of free nodes (unknowns); This will be the size of the matrix and D vector after assembly
@@ -276,7 +281,8 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
     K.setFromTriplets(triplets.begin(), triplets.end());
 }
 
-void FEM_2D::solve_LGS()
+template <typename Scalar>
+void FEM_2D<Scalar>::solve_LGS()
 {
 // Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
 #ifdef USE_MKL
@@ -304,7 +310,8 @@ void FEM_2D::solve_LGS()
     }
 }
 
-void FEM_2D::reconstruct_solution()
+template <typename Scalar>
+void FEM_2D<Scalar>::reconstruct_solution()
 {
     Sol.resize(plist.rows());
 
@@ -322,7 +329,8 @@ void FEM_2D::reconstruct_solution()
     }
 }
 
-void FEM_2D::print_solution()
+template <typename Scalar>
+void FEM_2D<Scalar>::print_solution()
 {
     // Just print the solution vector
     cout << "Solution at nodes:" << endl;
@@ -334,7 +342,8 @@ void FEM_2D::print_solution()
     cout << ")" << endl;
 }
 
-vector<tuple<string, double>> FEM_2D::full_solve()
+template <typename Scalar>
+vector<tuple<string, double>> FEM_2D<Scalar>::full_solve()
 {
     auto t1 = chrono::high_resolution_clock::now();
 
@@ -366,7 +375,8 @@ vector<tuple<string, double>> FEM_2D::full_solve()
     return timings;
 }
 
-tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_error)
+template <typename Scalar>
+tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, vector<double>> FEM_2D<Scalar>::validate_sol(Eigen::Vector<Scalar, Eigen::Dynamic> sol_tst, double max_error)
 {
     if (Sol.size() != sol_tst.size())
     {
@@ -387,3 +397,6 @@ tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_er
 
     return {error, error_stats};
 }
+
+template class FEM_2D<double>;
+template class FEM_2D<std::complex<double>>;

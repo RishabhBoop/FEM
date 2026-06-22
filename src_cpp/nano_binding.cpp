@@ -18,6 +18,8 @@
 namespace nb = nanobind;
 using namespace nb::literals; // for "_a" arg literals
 using namespace std;
+using FEM_2D_real = FEM_2D<double>;
+using FEM_2D_complex = FEM_2D<std::complex<double>>;
 
 MY_NB_MODULE(MODULE_NAME, m)
 {
@@ -51,7 +53,7 @@ MY_NB_MODULE(MODULE_NAME, m)
          .def("validate_sol", &FEM_1D::validate_sol,
               "Validate against an analytical solution, returning errors");
 
-     nb::class_<FEM_2D>(m, "FEM_2D")
+     nb::class_<FEM_2D_real>(m, "FEM_2D")
          .def(nb::init<
               VectorINT,
               MatrixINT,
@@ -64,44 +66,98 @@ MY_NB_MODULE(MODULE_NAME, m)
               function<double(double, double)>,
               function<double(double, double)>,
               function<double(double, double)>>())
-         .def_rw("RESOLUTION", &FEM_2D::RESOLUTION)
-         .def("gen_b", &FEM_2D::gen_b,
+         .def_rw("RESOLUTION", &FEM_2D_real::RESOLUTION)
+         .def("gen_b", &FEM_2D_real::gen_b,
               "Generate b from a vector")
-         .def("gen_c", &FEM_2D::gen_c,
+         .def("gen_c", &FEM_2D_real::gen_c,
               "Generate c from a vector")
-         .def("gen_delta_E", &FEM_2D::gen_delta_E,
+         .def("gen_delta_E", &FEM_2D_real::gen_delta_E,
               "Generate delta_E")
-         .def("gen_local_matrices", &FEM_2D::gen_local_matrices,
+         .def("gen_local_matrices", &FEM_2D_real::gen_local_matrices,
               "Generate local matrices")
-         .def("assemble_matrix", &FEM_2D::assemble_matrix,
+         .def("assemble_matrix", &FEM_2D_real::assemble_matrix,
               "Assemble the global stiffness matrix and load vector",
               "K11"_a, "K22"_a, "K33"_a, "K12"_a, "K13"_a, "K23"_a, "D1"_a)
-         .def("solve_LGS", &FEM_2D::solve_LGS,
+         .def("solve_LGS", &FEM_2D_real::solve_LGS,
               "Solve the linear system")
-         .def("reconstruct_solution", &FEM_2D::reconstruct_solution,
+         .def("reconstruct_solution", &FEM_2D_real::reconstruct_solution,
               "Reconstruct the full solution vector")
-         .def("full_solve", &FEM_2D::full_solve,
+         .def("full_solve", &FEM_2D_real::full_solve,
               "Run the full FEM solve process")
-         .def("print_solution", &FEM_2D::print_solution,
+         .def("print_solution", &FEM_2D_real::print_solution,
               "Print the computed solution")
-         .def("get_dr", &FEM_2D::get_dr,
+         .def("get_dr", &FEM_2D_real::get_dr,
               "Get the list of Dirichlet nodes as a NumPy array")
-         .def("get_rr", &FEM_2D::get_rr,
+         .def("get_rr", &FEM_2D_real::get_rr,
               "Get the list of Robin elements as a NumPy array")
-         .def("get_Randelemente", &FEM_2D::get_Randelemente,
+         .def("get_Randelemente", &FEM_2D_real::get_Randelemente,
               "Get the list of boundary elements as a Python list")
-         .def("get_plist", &FEM_2D::get_plist,
+         .def("get_plist", &FEM_2D_real::get_plist,
               "Get the list of node coordinates as a NumPy array")
-         .def("get_tlist", &FEM_2D::get_tlist,
+         .def("get_tlist", &FEM_2D_real::get_tlist,
               "Get the list of element connectivity as a NumPy array")
-         .def("get_K", &FEM_2D::get_K,
+         .def("get_K", &FEM_2D_real::get_K,
               "Get the global stiffness matrix K as a SciPy sparse matrix")
-         .def("get_D", &FEM_2D::get_D,
+         .def("get_D", &FEM_2D_real::get_D,
               "Get the load vector D as a NumPy array")
-         .def("get_Sol_noRW", &FEM_2D::get_Sol_noRW,
+         .def("get_Sol_noRW", &FEM_2D_real::get_Sol_noRW,
               "Get the solution vector before reconstruction")
-         .def("get_Solution", &FEM_2D::get_Sol,
+         .def("get_Solution", &FEM_2D_real::get_Sol,
               "Get the solution vector as a NumPy array")
-         .def("validate_sol", &FEM_2D::validate_sol,
+         .def("validate_sol", &FEM_2D_real::validate_sol,
+              "Validate against an analytical solution");
+
+     nb::class_<FEM_2D_complex>(m, CLASS("FEM_2D_complex"))
+         .def(nb::init<
+              VectorINT,
+              MatrixINT,
+              Matrix,
+              MatrixINT,
+              function<double(double, double)>,
+              function<double(double, double)>,
+              function<double(double, double)>,
+              function<double(double, double)>,
+              function<double(double, double)>,
+              function<double(double, double)>,
+              function<double(double, double)>>())
+         .def_rw("RESOLUTION", &FEM_2D_complex::RESOLUTION)
+         .def("gen_b", &FEM_2D_complex::gen_b,
+              "Generate b from a vector")
+         .def("gen_c", &FEM_2D_complex::gen_c,
+              "Generate c from a vector")
+         .def("gen_delta_E", &FEM_2D_complex::gen_delta_E,
+              "Generate delta_E")
+         .def("gen_local_matrices", &FEM_2D_complex::gen_local_matrices,
+              "Generate local matrices")
+         .def("assemble_matrix", &FEM_2D_complex::assemble_matrix,
+              "Assemble the global stiffness matrix and load vector",
+              "K11"_a, "K22"_a, "K33"_a, "K12"_a, "K13"_a, "K23"_a, "D1"_a)
+         .def("solve_LGS", &FEM_2D_complex::solve_LGS,
+              "Solve the linear system")
+         .def("reconstruct_solution", &FEM_2D_complex::reconstruct_solution,
+              "Reconstruct the full solution vector")
+         .def("full_solve", &FEM_2D_complex::full_solve,
+              "Run the full FEM solve process")
+         .def("print_solution", &FEM_2D_complex::print_solution,
+              "Print the computed solution")
+         .def("get_dr", &FEM_2D_complex::get_dr,
+              "Get the list of Dirichlet nodes as a NumPy array")
+         .def("get_rr", &FEM_2D_complex::get_rr,
+              "Get the list of Robin elements as a NumPy array")
+         .def("get_Randelemente", &FEM_2D_complex::get_Randelemente,
+              "Get the list of boundary elements as a Python list")
+         .def("get_plist", &FEM_2D_complex::get_plist,
+              "Get the list of node coordinates as a NumPy array")
+         .def("get_tlist", &FEM_2D_complex::get_tlist,
+              "Get the list of element connectivity as a NumPy array")
+         .def("get_K", &FEM_2D_complex::get_K,
+              "Get the global stiffness matrix K as a SciPy sparse matrix")
+         .def("get_D", &FEM_2D_complex::get_D,
+              "Get the load vector D as a NumPy array")
+         .def("get_Sol_noRW", &FEM_2D_complex::get_Sol_noRW,
+              "Get the solution vector before reconstruction")
+         .def("get_Solution", &FEM_2D_complex::get_Sol,
+              "Get the solution vector as a NumPy array")
+         .def("validate_sol", &FEM_2D_complex::validate_sol,
               "Validate against an analytical solution");
 }
