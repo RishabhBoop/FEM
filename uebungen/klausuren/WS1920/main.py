@@ -666,7 +666,7 @@ def e(part_of_d=False):
         tlist = netz.Triangle.elements.astype(np.int32)
         rr = netz.Semicircle.elements.astype(np.int32)
         dd = netz.SymmetryBoundary.elements.astype(np.int32).flatten()
-    
+
     mu_r = [1, 10, 100, 500, 3000]
     B_Z_results = []
     H_Z_results = []
@@ -713,7 +713,7 @@ def e(part_of_d=False):
         # get midpoints of r-Achse segments for plotting
         r_mid = (r_coords[:-1] + r_coords[1:]) / 2
 
-        B_Z = 1/r_mid * yp
+        B_Z = 1 / r_mid * yp
         H_Z = B_Z / (MU0 * mu_r)
         B_Z_results.append((r_mid, B_Z, mu_r))
         H_Z_results.append((r_mid, H_Z, mu_r))
@@ -721,7 +721,7 @@ def e(part_of_d=False):
         del solver  # Replace with your actual variable name
         gc.collect()
         # print("Execution finished cleanly.")
-    
+
     plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
     for r_mid, B_Z, mu_rel in B_Z_results:
@@ -738,9 +738,176 @@ def e(part_of_d=False):
     plt.ylabel("$H_z$ (A/m)")
     plt.title("Magnetic Field Strength $H_z$ along r-Achse")
     plt.legend()
-        
 
 
+def f_aufgabe():
+    print("–---------------------- f -----------------------")
+    global param_I1, param_I2, param_M0, param_mu1, param_mu2
+    param_I1 = 1.0
+    param_I2 = 0.0
+    param_M0 = 1e6
+    param_mu1 = 500
+    param_mu2 = 1
+    length = 0.01
+    epsL = length / 100
+    # load mesh
+    if LOAD_W_MT:
+        p, t, BouE, li_BE, bou_elem, CuE, li_CE = mt.LoadTriMesh("Klausur_WS1920_netz.npz", show=False)
+        Ps = [(0, param_Ra), (0, -param_Ra)]
+        rand1 = mt.RetrieveSegments(p, BouE, li_BE, Ps, ["Segments"])
+        Ps = [(0, -param_Ra), (0, param_Ra)]
+        rand2 = mt.RetrieveSegments(p, BouE, li_BE, Ps, ["Segments"])
+
+        Ps = [(0, 0), (param_dd, 0)]
+        linie1 = mt.RetrieveSegments(p, BouE, li_BE, Ps, ["Segments"])
+        Ps = [(param_Bm, 0), (param_Bm - param_dd, 0)]
+        linie2 = mt.RetrieveSegments(p, BouE, li_BE, Ps, ["Segments"])
+
+        netz = MshHs(
+            None,
+            p,
+            t,
+            {
+                "SymmetryBoundary": rand1,
+                "Semicircle": rand2,
+                "Linie1": linie1,
+                "Linie2": linie2,
+            },
+        )
+        netz.dim = 2
+        plist = np.asfortranarray(netz.points.astype(np.float64))
+        tlist = np.asfortranarray(netz.Triangle.elements.astype(np.int32))
+        rr = np.asfortranarray(netz.Semicircle.elements.astype(np.int32).reshape(-1, 2))
+        dd = np.ascontiguousarray(netz.SymmetryBoundary.elements.astype(np.int32).flatten())
+    else:
+        netz = load_mesh()
+        netz.dim = 2
+
+        netz.Triangle.plot(color="gray", alpha=0.2)
+
+        plist = netz.points.astype(np.float64)
+        tlist = netz.Triangle.elements.astype(np.int32)
+        rr = netz.Semicircle.elements.astype(np.int32)
+        dd = netz.SymmetryBoundary.elements.astype(np.int32).flatten()
+
+        B_Z_results = []
+
+    B_Z_results = []
+    H_Z_results = []
+
+    solver = fem_cpp.FEM_2D(dd, rr, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, q)
+    timing = solver.full_solve()
+    sol = solver.get_Solution()
+
+    # ----------------------
+    p = plist
+    print("Plist shape: ", plist.shape)
+    triangulation = tri.Triangulation(p[:, 0], p[:, 1])
+    plt.figure(figsize=(8, 6))
+    plt.tricontour(triangulation, sol, colors="k", levels=25)
+    contour = plt.tricontourf(triangulation, sol, cmap="jet", levels=25)
+    plt.colorbar(contour, label="Solution Value ($\\phi$)")
+    plt.triplot(triangulation, color="black", alpha=0.3, linewidth=0.5)  # overlay triangulation
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("2D FEA Nodal Solution ($\\phi$)")
+    # ----------------------
+    print_timings(timing, "FEM 2D Timings", len(plist), len(tlist), False, "CPP")
+
+    current_plist = plist[:, :2]  # only x and y coordinates, ignore z
+
+    # r-Achse
+    Ps = [[epsL, 0], [param_Ra - epsL, 0]]
+    rAchse = mt.RetrieveSegments(current_plist, CuE, li_CE, Ps, ["Nodes"])
+    rAchse = rAchse[0]
+
+    # # Knotenidizes zu linie1 und linie2
+    # Ps = [[0, 0], [param_dd, 0], [param_Bm - param_dd, 0], [param_Bm, 0]]
+    # fnodes = mt.FindClosestNode(range(len(current_plist)), current_plist, Ps)
+    # node0 = fnodes[0][0]
+    # node1 = fnodes[0][1]
+    # node2 = fnodes[0][2]
+    # node3 = fnodes[0][3]
+
+    # Extract values on r-Achse
+    r_coords = plist[rAchse, 0]
+    sol_r = sol[rAchse]
+    yp = np.diff(sol_r) / np.diff(r_coords)
+
+    # CRITICAL: sort before calculating differences
+    sort_idx = np.argsort(r_coords)
+    r_sorted = r_coords[sort_idx]
+    psi_sorted = sol_r[sort_idx]
+
+    # get midpoints of r-Achse segments for plotting
+    dr = np.diff(r_sorted)
+    yp = np.diff(psi_sorted) / dr
+    r_mid = r_sorted[:-1] + dr / 2.0
+
+    # # get midpoints of r-Achse segments for plotting
+    # r_mid = (r_coords[:-1] + r_coords[1:]) / 2
+
+    B_Z = 1 / r_mid * yp
+    H_Z = np.zeros_like(B_Z)
+    mag_min = param_rm0 - (param_ma / 2.0)
+    mag_max = param_rm0 + (param_ma / 2.0)
+
+    for i, r_val in enumerate(r_mid):
+        # check if inside the permanent magnet?
+        if mag_min <= r_val <= mag_max:
+            H_Z[i] = (B_Z[i] / MU0) - param_M0
+        # check if on other material at z=0
+        else:
+            # Material 1
+            if r_val <= param_dd:
+                mu_r = param_mu1
+            # Material 2
+            elif (param_Bm - param_dd) <= r_val <= param_Bm:
+                mu_r = param_mu2
+            # Everywhere else is Air
+            else:
+                mu_r = 1.0
+
+            H_Z[i] = B_Z[i] / (MU0 * mu_r)
+    B_Z_results.append((r_mid, B_Z, param_mu1))
+    H_Z_results.append((r_mid, H_Z, param_mu1))
+
+    del solver  # Replace with your actual variable name
+    gc.collect()
+    # print("Execution finished cleanly.")
+
+    plt.figure(figsize=(18, 5))
+
+    # 1. Plot: Potential Psi (Verwende hier die ungekürzten r_sorted und psi_sorted!)
+    plt.subplot(1, 3, 1)
+    plt.plot(r_sorted, psi_sorted, 'b-', label="$\\Psi(r)$", linewidth=1.5)
+    plt.xlabel("r (m)")
+    plt.ylabel("$\\Psi$ (Wb/m)")
+    plt.title("Vektorpotential $\\Psi$ entlang der r-Achse")
+    plt.grid(True)
+    plt.legend()
+
+    # 2. Plot: Flussdichte Bz
+    plt.subplot(1, 3, 2)
+    for r_m, b_val, mu_rel in B_Z_results:
+        plt.plot(r_m, b_val, 'r-', label=f"$B_z$ ($\\mu_1$={mu_rel})", linewidth=1.5)
+    plt.xlabel("r (m)")
+    plt.ylabel("$B_z$ (T)")
+    plt.title("Magnetische Flussdichte $B_z$ entlang der r-Achse")
+    plt.grid(True)
+    plt.legend()
+
+    # 3. Plot: Feldstärke Hz
+    plt.subplot(1, 3, 3)
+    for r_m, h_val, mu_rel in H_Z_results:
+        plt.plot(r_m, h_val, 'g-', label=f"$H_z$ ($\\mu_1$={mu_rel})", linewidth=1.5)
+    plt.xlabel("r (m)")
+    plt.ylabel("$H_z$ (A/m)")
+    plt.title("Magnetische Feldstärke $H_z$ entlang der r-Achse")
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
 
 
 if __name__ == "__main__":
@@ -761,6 +928,7 @@ if __name__ == "__main__":
     # print(f"Kopplungsfaktor k: {k:.6f}")
     # # print("–---------------------------------------------------")
     # d()
-    e()
+    # e()
+    f_aufgabe()
     # plt.axis("equal")
     plt.show()
