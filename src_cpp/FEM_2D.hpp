@@ -99,7 +99,6 @@ public:
     Eigen::Vector<Scalar, Eigen::Dynamic> get_Sol_noRW() { return Sol_noRW; };
     Eigen::Vector<Scalar, Eigen::Dynamic> get_Sol() { return Sol; };
 
-    tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, vector<double>> validate_sol(Eigen::Vector<Scalar, Eigen::Dynamic>, double);
-
+    tuple<Vector, vector<double>> validate_sol(Eigen::Vector<Scalar, Eigen::Dynamic> sol_tst, double max_error);
     ~FEM_2D() = default;
 };

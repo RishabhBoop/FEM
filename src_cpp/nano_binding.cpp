@@ -107,19 +107,19 @@ MY_NB_MODULE(MODULE_NAME, m)
          .def("validate_sol", &FEM_2D_real::validate_sol,
               "Validate against an analytical solution");
 
-     nb::class_<FEM_2D_complex>(m, CLASS("FEM_2D_complex"))
+     nb::class_<FEM_2D_complex>(m, "FEM_2D_complex")
          .def(nb::init<
               VectorINT,
               MatrixINT,
               Matrix,
               MatrixINT,
-              function<double(double, double)>,
-              function<double(double, double)>,
-              function<double(double, double)>,
-              function<double(double, double)>,
-              function<double(double, double)>,
-              function<double(double, double)>,
-              function<double(double, double)>>())
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>,
+              function<complex<double>(double,double)>>())
          .def_rw("RESOLUTION", &FEM_2D_complex::RESOLUTION)
          .def("gen_b", &FEM_2D_complex::gen_b,
               "Generate b from a vector")
