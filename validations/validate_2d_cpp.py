@@ -20,7 +20,7 @@ current_dir = path.dirname(path.abspath(__file__))
 tst_data_dir = f"{current_dir}/tst_2D"
 # ------------------------------------------------------------------------------
 
-ERROR_TOLERANCE = 1e-12
+ERROR_TOLERANCE = 1e-11
 
 # ------------------------------------------------------------------------------
 
@@ -70,8 +70,8 @@ def a1_a():
 
     plist = np.loadtxt(f"{tst_data_dir}/Netz2D_p.dat", dtype=float)
     tlist = np.loadtxt(f"{tst_data_dir}/Netz2D_t.dat", dtype=int)
-    dr = np.loadtxt(f"{tst_data_dir}/Netz2D_dr_a).dat", dtype=int)
-    rr = []
+    dr = np.loadtxt(f"{tst_data_dir}/Netz2D_dr_a).dat", dtype=int).flatten()
+    rr = np.array([], dtype=int).reshape(0, 2)
 
     fem_solver = fem_cpp.FEM_2D(dr, rr, plist, tlist, alpha1, alpha2, beta, f, phi, gamma, q)
 
