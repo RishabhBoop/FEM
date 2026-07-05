@@ -29,7 +29,7 @@ dev = [
 
 [tool.scikit-build]
 wheel.packages = ["src"]
-cmake.args = ["--preset", "default", "-DBUILD_MKL_TARGETS=ON"]
+cmake.args = ["--preset", "default", "-DBUILD_MKL_TARGETS=OFF"]
 # cmake.build-type = "Release"
 
 [tool.black]
