@@ -8,7 +8,6 @@ import subprocess
 import gmsh
 import sys
 import colorsys
-from typing import Any, Callable, Optional, Union
 
 ##########################################
 #
@@ -23,52 +22,19 @@ from typing import Any, Callable, Optional, Union
 
 
 class ElementMsh:
-    """Container for a single class of mesh elements (points, lines, triangles, ...).
-
-    An ``ElementMsh`` instance is created and attached as an attribute of a parent
-    :class:`MshHs` object for every distinct element type / physical group found in
-    the mesh (e.g. ``mesh.Triangle``, ``mesh.Line``, ``mesh.Rand``). It stores the
-    connectivity (node indices per element), can plot itself with matplotlib, can
-    derive a new sub-selection of elements, and (for line elements) can flip the
-    orientation of the elements.
-
-    Attributes:
-        elements (numpy.ndarray): Array of shape ``(n_elements, n_nodes_per_element)``
-            with the (0-based) node indices making up each element. E.g. for
-            triangles ``shape = (n_tri, 3)``, for line segments ``shape = (n_seg, 2)``.
-        info (str): Human readable description of how/why this element set was created.
-        parent (MshHs): Back-reference to the owning mesh object (gives access to
-            ``parent.points``, ``parent.dim``, ``parent.ax``, ``parent.edge_tab``, ...).
-        nodes (numpy.ndarray): Sorted array of unique node indices used by ``elements``.
-            Only present if ``node=True`` was passed to the constructor.
-        connect (list[list[list[int]]]): For line elements (``elements.shape[1] == 2``)
-            only: for every edge, the list of neighboring 2D elements (triangles/quads)
-            that share that edge. Only present if ``connect`` was passed to the
-            constructor.
+    """
+    Zusatzinfos von Objekten:
+    -- elemente
+    -- gegebenfalls Knoten
+    -- gegebenfalls Verknüpfung zwischen entities
+    -- Elemente können geplottet werden
+       plot(mesh,ax=None, color='k', alpha=0.7, node_label=False):
+    -- Aus Elementen können durch eine Auswahl mittels einer Funktion neue Elemente gewählt werden
+       def select(Attributname, Auswahlfunktion):
+    -- Info wird angezeigt
     """
 
-    def __init__(
-        self,
-        parent: "MshHs",
-        tt: np.ndarray,
-        name: str,
-        node: bool = False,
-        connect: Optional[dict] = None,
-    ) -> None:
-        """Create a new element container.
-
-        Args:
-            parent: The owning :class:`MshHs` mesh object.
-            tt: Array of shape ``(n_elements, n_nodes_per_element)`` with the
-                (0-based) node indices of every element.
-            name: Descriptive text stored in :attr:`info`.
-            node: If ``True``, also compute and store the sorted array of unique
-                node indices used by ``tt`` in :attr:`nodes`.
-            connect: Edge-to-neighbor-element lookup table (as built by
-                :class:`MshHs` in ``self.edge_tab``), used only when ``tt`` are line
-                elements (2 nodes per element) to populate :attr:`connect` with the
-                triangles/quads adjacent to each edge.
-        """
+    def __init__(self, parent, tt, name, node=False, connect=None):
         # Knotenkoordinaten sind nicht öffentlich, werden aber hier gebraucht zum plotten
         self.elements = tt
         self.info = name
@@ -81,48 +47,10 @@ class ElementMsh:
                 self.connect = [connect[tuple(np.sort(t).astype(int))] for t in self.elements]
 
     # methode plotten
-    def plot(
-        self,
-        ax: Optional[plt.Axes] = None,
-        newaxis: bool = False,
-        color: str = "grey",
-        alpha: float = 0.3,
-        node_label: bool = False,
-        direction: bool = False,
-        *args: Any,
-        **kwargs: Any,
-    ) -> plt.Axes:
-        """Plot this element set with matplotlib.
-
-        Depending on the number of nodes per element, points, lines, triangles/
-        quads (2D) or tetrahedra/hexahedra/... (3D, via ``Poly3DCollection``) are
-        drawn. Reuses ``parent.ax`` across successive calls unless a new axis is
-        requested, so several element sets can be overlaid on the same figure.
-
-        Args:
-            ax: Matplotlib axes to draw into. If ``None``, the parent mesh's stored
-                axes (``self.parent.ax``) is used, creating a new figure/axes (2D or
-                3D depending on ``self.parent.dim``) if none exists yet.
-            newaxis: If ``True``, force creation of a brand-new figure/axes instead
-                of reusing ``self.parent.ax``.
-            color: Edge color (and, lightened, face color for filled 2D elements).
-            alpha: Transparency of the plotted elements/faces.
-            node_label: If ``True``, annotate every node used by this element set
-                with its node index.
-            direction: If ``True`` and elements are line segments (2 nodes), draw a
-                small arrowhead indicating the running direction of each segment.
-            *args: Extra positional arguments forwarded to the underlying matplotlib
-                collection / plot call.
-            **kwargs: Extra keyword arguments forwarded to the underlying matplotlib
-                collection / plot call.
-
-        Returns:
-            The matplotlib axes the elements were drawn into (either the passed-in
-            ``ax`` or the parent's stored axes).
-
-        Raises:
-            ValueError: If an explicit ``ax`` is given but it is not a 3D axes while
-                the parent mesh is 3-dimensional.
+    def plot(self, ax=None, newaxis=False, color="grey", alpha=0.3, node_label=False, direction=False, *args, **kwargs):
+        """
+        Plotte die Elemente mit matplotlib zum aktuellen Attribut
+        Direction ist im Moment nur für Linien möglich
         """
         # eingeführt, da es in jupyter dazu kam, dass plt.figures in aktuelle bx figures geplottet wurden.
         # Hatte auch was mit plt.show() zu tun.
@@ -221,25 +149,11 @@ class ElementMsh:
         return bx
 
     # Nachträglich noch objekte aus bekannten auswählen
-    def select(self, new_name: str, fkt: Callable[[np.ndarray], np.ndarray]) -> None:
-        """Create a new sub-selection of elements filtered by a predicate on their centroid.
+    def select(self, new_name, fkt):
+        """
+        Aus den Elementen des aktuellen Attributes können Teilmengen selektiert werden
+        hierzu wird eine Funktion definiert, z.B. lambda x: (x[:,0]<-1) | (x[:,0]>1)
 
-        The centroid (mean of the node coordinates) of every element is computed
-        and passed to ``fkt``, whose boolean-array return value selects which
-        elements are kept. The resulting subset is stored as a new
-        :class:`ElementMsh` attribute on the parent mesh under ``new_name``.
-
-        Args:
-            new_name: Attribute name under which the new :class:`ElementMsh` is
-                registered on ``self.parent`` (i.e. accessible afterwards as
-                ``self.parent.<new_name>``).
-            fkt: Predicate function taking the array of element centroids
-                (shape ``(n_elements, 3)``) and returning a boolean mask of shape
-                ``(n_elements,)``, e.g. ``lambda x: (x[:, 0] < -1) | (x[:, 0] > 1)``.
-
-        Returns:
-            None. The new element set is attached to ``self.parent`` as a side
-            effect.
         """
         num = self.elements.shape[1]
         mitte = np.sum(self.parent.points[self.elements, :], axis=1) / num
@@ -262,31 +176,13 @@ class ElementMsh:
         else:
             setattr(self.parent, new_name, ElementMsh(self.parent, new_elements, info_text))
 
-    def orientation(self, flip: Optional[str] = None) -> None:
-        """Report on, and optionally reverse, the traversal direction of line elements.
-
-        Only meaningful for line-element sets (2 nodes per element) that carry a
-        ``connect`` table (i.e. were built with ``connect=parent.edge_tab``). Uses
-        :func:`FindLeftRight` to determine, for every segment, whether its adjacent
-        2D element(s) lie to the left or right of the segment's running direction,
-        and prints a summary. If ``flip`` is given, the corresponding segments'
-        node order is reversed in place.
-
-        Args:
-            flip: One of:
-
-                * ``"all"`` — reverse every segment (equivalent to
-                  ``elements[::-1, ::-1]``).
-                * ``"left"`` — reverse only those segments that have exactly one
-                  neighboring element and it lies on the left.
-                * ``"right"`` — reverse only those segments that have exactly one
-                  neighboring element and it lies on the right.
-                * ``None`` (default) — only report the orientation, do not modify
-                  anything.
-
-        Returns:
-            None. ``self.elements`` (and ``self.connect``, if present) are updated
-            in place when ``flip`` is not ``None``.
+    def orientation(self, flip=None):
+        """
+        Drehe Laufrichtung der Elemente um.
+        Für Randelemente können auch diejenigen gedreht werden, die links/rechts orientiert sind.
+        flip= 'all'  : flippe alle segemente
+        flip='left'  : flippe nur die mit linkem Nachbar
+        flip='right' : flippe nur die mit rechtem Nachbar
         """
 
         # Ursprungs-Attributnamen dynamisch im parent suchen ---
@@ -324,63 +220,28 @@ class ElementMsh:
 
 
 class MshHs:
-    """Wraps a gmsh model (or plain point/triangle/segment lists) into convenient attributes.
+    """
+    Erzeuge aus einem Model oder aus Listen verschiedene Objekte:
 
-    On construction, ``MshHs`` inspects either a live ``gmsh.model``-like object or
-    hand-supplied ``points`` / ``triangles`` / ``segments`` and creates one
-    :class:`ElementMsh` attribute per element type it finds, e.g. ``self.Triangle``,
-    ``self.Quadrilateral``, ``self.Tetrahedron``, ``self.Line``, plus one attribute
-    per named physical group / user-supplied segment dict entry (e.g.
-    ``self.Rand``, ``self.RandInnen``). It also builds a global edge→neighboring-
-    element lookup table (:attr:`edge_tab`) used for orientation and normal-
-    derivative computations, and keeps a single matplotlib axes (:attr:`ax`) so
-    multiple element sets can be plotted on top of each other.
+    -- Triangle, Quadritangle, ......
+    -- points
+    -- Vollständige Kantenliste (nur 2D)
+    -- vordefinierte Objekte (über dict, oder physik. Gruppen)
+    -- Achsenparameter für plot
+    -- plot dimension
 
-    Attributes:
-        ax (matplotlib.axes.Axes | None): Currently active axes used by
-            :meth:`ElementMsh.plot`; created lazily on first plot call, or reset by
-            passing ``newaxis=True``.
-        dim (int): Spatial dimension of the mesh: ``3`` for a full gmsh model, or
-            ``2`` if constructed from a hand-supplied 2D point/triangle list.
-        points (numpy.ndarray): Node coordinates, shape ``(n_nodes, 3)`` (padded
-            with a zero z-column for the hand-supplied 2D case).
-        edge_tab (dict[tuple[int, int], list[list[int]]]): Maps a sorted
-            ``(node_i, node_j)`` edge tuple to the list of 2D/3D element node lists
-            that contain that edge. Used to find left/right neighbors of a curve.
-        Triangle, Quadrilateral, Tetrahedron, Hexahedron, Prism, Pyramid, Line,
-        Point (ElementMsh): One such attribute is created for every element type
-            actually present in the mesh (names depend on gmsh's element
-            properties / the dict keys supplied by the caller).
-        <physical group name> / <segments dict key> (ElementMsh): One attribute
-            per gmsh physical group (excluding those with names starting with
-            ``"_"`` or the special names ``"__dict__"``, ``"__class__"``), or, in
-            the hand-supplied case, one per key of the ``segments`` dict.
+    Die geometrischen Objekte (Triangle,...) haben selbst wieder Attribute
+         - elements
+         - connect
+         - info
+         - node
+    Sie enthalten auch Methoden wie
+         - plot     --> .plot(mesh,ax=None, newaxis=False, color='k', alpha=0.7, node_label=False)
+         - select   --> .select(newname,auswahlfunktion)    bsp.: lambda x: (x[:,0]<-1) | (x[:,0]>1)
+         - orientation  --> .orientation(self, flip=None or 'all' or right' or 'left')   gibt auch info über die orientierung
     """
 
-    def __init__(
-        self,
-        mod: Optional[Any],
-        points: Union[np.ndarray, list] = [],
-        triangles: Union[np.ndarray, list] = [],
-        segments: dict = {},
-    ) -> None:
-        """Build the mesh wrapper either from a gmsh model or from plain arrays.
-
-        Args:
-            mod: A gmsh model object (typically ``gmsh.model``) that has already
-                had a mesh generated on it, or ``None`` to instead build the mesh
-                from the ``points`` / ``triangles`` / ``segments`` arguments.
-            points: Only used when ``mod is None``. Array-like of shape
-                ``(n_nodes, 2)`` with the 2D node coordinates; internally padded
-                with a zero z-column and stored in :attr:`points`.
-            triangles: Only used when ``mod is None``. Array-like of shape
-                ``(n_tri, 3)`` with the (0-based) node indices of every triangle;
-                stored as ``self.Triangle`` (an :class:`ElementMsh`).
-            segments: Only used when ``mod is None``. Dict mapping a name to an
-                array-like of shape ``(n_seg, 2)`` of (0-based) node index pairs
-                describing a polyline/boundary curve; one :class:`ElementMsh`
-                attribute is created per dict entry, named after its key.
-        """
+    def __init__(self, mod, points=[], triangles=[], segments=[]):
 
         self.ax = None
         self.dim = 3
@@ -488,54 +349,20 @@ class MshHs:
 #
 # Ermittle die relative Lage von angrenzenden Dreieckselementen
 #
-def FindLeftRight(
-    name: str,
-    segments: np.ndarray,
-    neighbor_elements: list,
-) -> tuple:
-    """Classify each segment's neighboring 2D element(s) as lying to its left or right.
+def FindLeftRight(name, segments, neighbor_elements):
+    """
+    returns number_neighbors,left_idx, left_elements, right_idx, right_elements
 
-    For every line segment (given in a consistent running order, node ``i`` to
-    node ``i+1``), determines whether each of its (at most two) adjacent
-    triangles/quads is on the left or right side of the segment's direction of
-    travel, based on which node of the neighboring element matches the segment's
-    end node.
+    left_idx        contains the indices of the segments having left elements
+    left_elements   elements lying on the left side   left_elements[k] refers to segments[left_idx[k]]
 
-    Args:
-        name: Name of the curve (only used for the diagnostic print statements).
-        segments: Array of shape ``(n_seg, 2)`` with the (0-based) node indices of
-            each segment, expected to already be listed in consecutive
-            (end-to-end connected) order.
-        neighbor_elements: List of length ``n_seg``; each entry is a list of the
-            neighboring 2D elements (as node-index lists) sharing that segment's
-            edge, e.g. as produced by ``ElementMsh.connect`` /
-            ``MshHs.edge_tab``.
+    same for right
 
-    Returns:
-        A 5-tuple ``(number_neighbors, left_idx, left_elements, right_idx,
-        right_elements)`` where:
-
-        * ``number_neighbors`` (numpy.ndarray): Number of neighboring elements
-          (0, 1 or 2) for every segment, shape ``(n_seg,)``.
-        * ``left_idx`` (numpy.ndarray): Indices into ``segments`` of the segments
-          that have a neighbor lying to their left.
-        * ``left_elements`` (numpy.ndarray): For each entry in ``left_idx``, the
-          corresponding neighboring element's node indices, reordered to start at
-          the segment's first node.
-        * ``right_idx`` (numpy.ndarray): Indices into ``segments`` of the segments
-          that have a neighbor lying to their right.
-        * ``right_elements`` (numpy.ndarray): Analogous to ``left_elements`` for
-          the right-hand neighbors.
     """
     sh = segments.shape
     if sh[1] != 2:
         print("Lines only for the Moment")
         return
-
-    if not np.array_equal(segments[1:, 0], segments[:-1, 1]):
-        print("Warning: The single segments of the curve ", name, " are not in consecutive order")
-    else:
-        print("The single segments of the curve ", name, " are in consecutive order")
 
     # Liste mit rechten und linken nachbarn
     right_elements = []
@@ -581,75 +408,129 @@ def FindLeftRight(
     )
 
 
-def NormalDerivative(
-    name: str,
-    mesh: "MshHs",
-    sol: np.ndarray,
-    normal_direction: str = "right",
-) -> Optional[tuple]:
-    """Compute the normal derivative of a nodal FEM solution along a named curve.
+#####
+# Gebe jene zurück, bei denen das gebiet in richtung direction liegt
+def OrientandResort(name, mesh, direction="left", consecutive=True):
+    """
+    Segments with a given direction (left or right) are extracted. If the segments are not continously connected (consecutive order),
+    they are resorted.
 
-    Uses linear-triangle shape functions on the elements adjacent to the curve
-    ``name`` (found via :func:`FindLeftRight`) to evaluate the gradient of ``sol``
-    on the side of the curve selected by ``normal_direction``, then projects it
-    onto the outward normal of each segment.
+    name:         name of the object (e.g. name of line in the mesh class)
+    mesh:         mesh class
+    direction:    domain may be 'left' or 'right'
 
-    Args:
-        name: Attribute name of the curve on ``mesh`` (must be a line-element
-            :class:`ElementMsh`, i.e. 2 nodes per element).
-        mesh: The :class:`MshHs` mesh object that owns the curve, its ``points``
-            and the triangle connectivity needed for the gradient.
-        sol: Nodal solution values, shape ``(n_nodes,)``, indexed the same way as
-            ``mesh.points``.
-        normal_direction: Which side of the curve (as traversed from its first to
-            last node) to evaluate the derivative on: ``"right"`` (default) or
-            ``"left"``.
+    return
+       for direction left: segments and connecting elements with domain on left side.
+       The connecting elements are resorted and start with the first node of the corresponding segment
 
-        Returns:
-        A 5-tuple ``(rl, normal_derivative, idx, normal, grad_u)``, or ``None`` if
-        the curve could not be found or has no neighbor on the requested side:
-
-        * ``rl`` (numpy.ndarray): Running arc length along the curve for each used
-          segment (segment midpoints, shifted so the first value is 0).
-        * ``normal_derivative`` (numpy.ndarray): :math:`\\nabla u \\cdot \\mathbf{n}`
-          evaluated on each used segment's neighboring triangle.
-        * ``idx`` (numpy.ndarray): Indices into the curve's segment array
-          identifying which segments were actually used (those having a neighbor
-          on the requested side).
-        * ``normal`` (numpy.ndarray): Unit outward normal vector of every used
-          segment, shape ``(n_used, 2)``.
-        * ``grad_u`` (numpy.ndarray): Gradient of ``sol`` on every used segment's
-          neighboring triangle, shape ``(n_used, 2)``.
     """
 
-    curve = getattr(mesh, name, None)
-    if curve == None:
-        print("Curve not found, check curve name")
-        return
-    seg = curve.elements
+    attr = getattr(mesh, name, None)
+    if attr is not None:
+        number_neighbors, l_idx, left_e, r_idx, right_e = FindLeftRight(name, attr.elements, attr.connect)
 
-    if seg.shape[1] != 2:
-        print("For the moment only line elements with 2 nodes are possible")
-        return
-
-    # Finde linke und rechte elemente der segmente
-    number_neighbors, l_idx, left_e, r_idx, right_e = FindLeftRight(name, curve.elements, curve.connect)
-
-    if normal_direction == "left":
-        idx = l_idx
-        n = left_e
-        dir_fac = -1
+        if direction == "left":
+            segments = attr.elements[l_idx]
+            connecting_elements = left_e
+        elif direction == "right":
+            segments = attr.elements[r_idx]
+            connecting_elements = right_e
+        else:
+            print("Only left and right possible.")
+            return None
     else:
-        idx = r_idx
-        n = right_e
-        dir_fac = 1
-
-    if len(n) == 0:
-        print("No %s elements found, check parameter normal_direction" % (normal_direction))
+        print("No Element named: ", name)
         return None
 
+    if (not np.array_equal(segments[1:, 0], segments[:-1, 1])) and consecutive == True:
+        print("The single segments of the curve ", name, " are not in consecutive order, resort order ...")
+        return SortConsecutive(segments, connecting_elements)
+
+    else:
+        return segments, connecting_elements
+
+
+#####################
+def SortConsecutive(seg, connect):
+    """
+    sort in consecutive order
+    seg       : segments to be sorted
+    connect   : connecting elements. If not known use []
+
+    return resorted segments
+    """
+
+    k = seg.shape[1]
+
+    # suche anfangspunkt
+    start = np.setdiff1d(seg[:, 0], seg[:, 1])
+    if len(start) == 0:
+        print("closed curve")
+        ind = 0
+    elif len(start) > 1:
+        print("Error, not expected")
+        return
+    else:
+        ind = start[0]
+
+    if len(connect) != 0:
+        arr = np.column_stack((seg, connect))
+    else:
+        arr = 1 * seg
+
+    sorted_arr = arr[ind, :][None, :]
+    np.delete(arr, ind, axis=0)
+
+    # sortiere um, erstes element ist bereits festgelegt
+    for i in range(len(seg) - 1):
+        search_ind = sorted_arr[-1][k - 1]
+        # suche nun passendes nächstes seg element
+        for j in range(len(arr)):
+            # gefunden
+            if arr[j][0] == search_ind:
+                sorted_arr = np.vstack([sorted_arr, arr[j, :]])
+                np.delete(arr, j, axis=0)
+                break
+
+    if len(sorted_arr) != len(seg):
+        print("Error, len(sorted_segments) != len(segments) ")
+        return None
+
+    return sorted_arr[:, :2], sorted_arr[:, 2:]
+
+
+#######################
+def NormalDerivative(p, sol, seg, connecting):
+    """
+    Berechne die Normalenableitung (nur für Linien). Der Normalenvektor zeigt in das Gebiet.
+
+       seg        : segmente  (z.B. Linien)
+       connecting : sortierte angrenzenden Elemente (z.b. Dreiecke)
+       sol   : Lösung
+
+       Die Segmente sollten fortlaufend sortiert sein z.b. [ [12,27], [27,19], [19,3], [3,.] ... ]
+       Die connecting Elemente sind sortiert und müssen immer mit dem ersten Index des Segmentes beginnen
+           links orientiert  : [ [12,27,9],[27,19,8],[3,...] ]
+           rechts orientiert : [ [12,9,27],[27,8,19],[3,...] ]
+       Die gewünschte Umlaufrichtung wird daraus ermittelt
+
+       output:
+       running length, normal derivative, gradient, normal vector
+
+    """
+
+    n = connecting
+
+    # Finde Laufrichtung
+    # elemente liegen links
+    if (seg[0, 0] == n[0, 0]) and (seg[0, 1] == n[0, 1]):
+        dir_fac = -1
+        print("Umlaufsinn: Gebiet liegt links")
+    else:
+        dir_fac = 1
+        print("Umlaufsinn: Gebiet liegt rechts")
+
     # Berechne Normalenableitung
-    p = mesh.points
     # berechne alle bs und cs (shape: number of elements x 3)
     bs = p[n[:, [1, 2, 0]], 1] - p[n[:, [2, 0, 1]], 1]
     cs = p[n[:, [2, 0, 1]], 0] - p[n[:, [1, 2, 0]], 0]
@@ -660,10 +541,10 @@ def NormalDerivative(
     dudx = np.sum(bs * u, axis=1) / twodelta
     dudy = np.sum(cs * u, axis=1) / twodelta
     # der Vektor in Laufrichtung durch die Segmente
-    vec = p[seg[idx, 1], :] - p[seg[idx, 0], :]
+    vec = p[seg[:, 1], :] - p[seg[:, 0], :]
     vec_abs = np.sqrt(np.sum(vec**2, axis=1))
     # Normalenvektor vec x e_z, liegt also in Laufrichtung rechts
-    normal = np.column_stack([vec[:, 1] / vec_abs * dir_fac, -vec[:, 0] / vec_abs * dir_fac])
+    normal = dir_fac * np.column_stack([vec[:, 1] / vec_abs, -vec[:, 0] / vec_abs])
 
     # Gradient
     grad_u = np.column_stack([dudx, dudy])
@@ -678,53 +559,28 @@ def NormalDerivative(
     # rl[1:] += Ls[1:] / 2
     rl = np.cumsum(Ls) - Ls[0]
 
-    if len(idx) != len(seg):
-        print("Warning: Not all segment elements were used due to orientation ( %i / %i )" % (len(idx), len(seg)))
-
-    return rl, normal_derivative, idx, normal, grad_u
+    return rl, normal_derivative, normal, grad_u
 
 
 # Berechne den Gradienten für ein Netz
-def ComputeGradient(
-    p: np.ndarray,
-    t: np.ndarray,
-    u: np.ndarray,
-    location: str = "middle",
-    num: int = 10,
-    p_loc: Union[np.ndarray, list] = [],
-) -> tuple:
-    """Compute the (piecewise-constant, per-triangle-linear) gradient of a nodal field.
+def ComputeGradient(p, t, u, location="middle", num=10, p_loc=[]):
+    """
+    Compute the Gradient of a triangular mesh
 
-    For each requested evaluation point, the enclosing triangle is found via its
-    barycentric coordinates and the gradient of the linear (P1) shape functions on
-    that triangle is used to evaluate :math:`\\nabla u` there.
+    Input:   p    array([[x1,y1],[x2,y2],...])          node points
+             t    array([[n1,n2,n3],[n4,n5,n6],...])    elements
+             u    array([u1,u2,u3,.....])               function at node values
+             location                                   'middle', 'nodes','grid','set'
+                                                        middle: compute at middle points of triangles:
+                                                        nodes: compute at node points, as mean value
+             p_loc  array([[X1,Y1],[X2,Y2],...])        points for gradient evaluation (location must be 'set')
+             num  N                                     generate NxN points array for p_loc (location must be 'grid' )
 
-    Args:
-        p: Node coordinates, shape ``(n_nodes, 2)``.
-        t: Triangle connectivity, shape ``(n_tri, 3)`` with (0-based) node indices.
-        u: Nodal values of the field, shape ``(n_nodes,)``.
-        location: Where to evaluate the gradient:
 
-            * ``"middle"`` (default) — at the centroid of every triangle.
-            * ``"nodes"`` — at every node, as the average of the (constant)
-              gradients of all triangles touching that node.
-            * ``"grid"`` — on a regular ``num x num`` grid spanning the mesh's
-              bounding box.
-            * ``"set"`` — at the explicit points given in ``p_loc``.
-        num: Grid resolution per axis, only used when ``location="grid"``.
-        p_loc: Explicit evaluation points, shape ``(n_points, 2)``, only used when
-            ``location="set"``.
-
-    Returns:
-        A 4-tuple ``(x, y, g_x, g_y)``:
-
-        * ``x``, ``y`` (numpy.ndarray): Coordinates of the points where the
-          gradient was evaluated.
-        * ``g_x``, ``g_y`` (numpy.ndarray): x- and y-components of
-          :math:`\\nabla u` at those points.
-
-        Returns ``([], [], [], [])`` if ``location="set"`` is requested but
-        ``p_loc`` is empty.
+    Output:  x     x-component of point
+             y     y-component of point
+             g_x   gradient, x-component at (x,y)
+             g_y   gradient, y-component at (x,y)
     """
 
     if location == "grid":
@@ -813,21 +669,7 @@ def ComputeGradient(
 
 
 # Aufhellung Flächenfarbe im Vergleich zu Kantenfarbe
-def lighten(color: Union[str, tuple], amount: float = 0.5) -> tuple:
-    """Lighten a matplotlib color towards white, keeping its hue and saturation.
-
-    Converts ``color`` to HLS, increases the lightness by a fraction of the
-    remaining distance to white, then converts back to RGB. Used to derive a
-    pale face color from a given edge color when plotting filled 2D elements.
-
-    Args:
-        color: Any matplotlib-recognized color (name, hex string, or RGB tuple).
-        amount: Fraction (0..1) of the way to move towards white; ``0`` returns
-            the color unchanged, ``1`` returns white.
-
-    Returns:
-        The lightened color as an ``(r, g, b)`` tuple with components in ``[0, 1]``.
-    """
+def lighten(color, amount=0.5):
     r, g, b = to_rgb(color)
     h, l, s = colorsys.rgb_to_hls(r, g, b)
     l = 1 - amount * (1 - l)  # Richtung Weiß
