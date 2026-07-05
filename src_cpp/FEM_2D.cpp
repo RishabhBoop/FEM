@@ -137,7 +137,13 @@ tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynami
 }
 
 template <typename Scalar>
-void FEM_2D<Scalar>::assemble_matrix(Eigen::Vector<Scalar, Eigen::Dynamic> &K11, Eigen::Vector<Scalar, Eigen::Dynamic> &K22, Eigen::Vector<Scalar, Eigen::Dynamic> &K33, Eigen::Vector<Scalar, Eigen::Dynamic> &K12, Eigen::Vector<Scalar, Eigen::Dynamic> &K13, Eigen::Vector<Scalar, Eigen::Dynamic> &K23, Eigen::Vector<Scalar, Eigen::Dynamic> &D1)
+void FEM_2D<Scalar>::assemble_matrix(Eigen::Vector<Scalar, Eigen::Dynamic> &K11,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K22,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K33,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K12,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K13,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K23,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &D1)
 {
     vector<int> node_to_matrix(plist.rows(), -1); // list of size plist, initialized to -1 (indicating Randwert nodes); holds mapping from global node index to matrix index
     int free_count = 0;                           // count of free nodes (unknowns); This will be the size of the matrix and D vector after assembly
