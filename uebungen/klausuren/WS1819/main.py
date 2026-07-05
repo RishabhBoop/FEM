@@ -1,40 +1,61 @@
+import gc
+
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 from numba import cfunc, float64, int32, complex128
 import gmsh
 
 import fem_cpp
+from scipy import integrate
+from uebungen.klausuren.WS1819.KlausurWS1819_netz import HH, RU, RO, HolPoi
 
 from helper_funcs.colors import Colors as colors
 from helper_funcs.visualizations import visualize_solution, print_timings, visualize_error, print_error_stats
 from helper_funcs.mesh import get_plist_tlist_from_gmsh, get_boundaries, get_boundary_edges
+import scipy.integrate as integrate
 
 import helper_funcs.meshtools as mt
 from helper_funcs.gmshtools import ElementMsh, MshHs
+import helper_funcs.gmshtools as gm
+from uebungen.klausuren.WS1819.KlausurWS1819_netz import RU
 
 # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
 
 mesh_name = "Rishabh_Venugopal_WS1819"
 
-SIGMA = 10e-4
+SIGMA_0 = 1e-12
+SIGMA = 1e-4
 EPSILON_0 = 8.854187817e-12
 EPSILON_R = 11.0
 OMEGA = 0.0
 
 Ra = 25e-2  # 25cm
-HH = 10e-2  # 10cm -- höhe platte
+# HH = 10e-2  # 10cm -- höhe platte
 Dx = 3e-3  # 3mm
 V0 = 1.0  # 1v
-hh = 5e-2  # 5cm -- höhe dielektrikums
+# hh = 5e-2  # 5cm -- höhe dielektrikums
 
 num_platten = 4
-
+breite = num_platten * Dx + (num_platten - 1) * Dx  # total width of all plates and dielektrikums
 
 # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
 
 
 def alpha_func(x, y):
-    return -complex(SIGMA, OMEGA * EPSILON_0 * EPSILON_R)
+    # check if in dielektrikum region
+    for i in range(num_platten - 1):
+        dielek_x_start = -breite / 2 + (i * Dx * 2) + Dx
+        dielek_x_end = dielek_x_start + Dx
+        dielek_y_start = -HH / 2
+        dielek_y_end = dielek_y_start + hh
+
+        if dielek_x_start <= x <= dielek_x_end and dielek_y_start <= y <= dielek_y_end:
+            return EPSILON_0 * EPSILON_R
+
+    return EPSILON_0  # Outside dielektrikum, return e0
+
+    # return EPSILON_0 * EPSILON_R
 
 
 def beta_func(x, y):
@@ -46,11 +67,26 @@ def f_func(x, y):
 
 
 def gamma_func(x, y):
-    return 1.0
+    zahler = EPSILON_0
+    nenner = np.sqrt(x**2 + y**2) * np.log(np.sqrt(x**2 + y**2))
+    return -zahler / nenner
 
 
 def phi_func(x, y):
-    return 0.0
+    # check if platte is orange or blue
+    for i in range(num_platten):
+        plate_x_start = -breite / 2 + (i * Dx * 2)
+        plate_x_end = plate_x_start + Dx
+        plate_y_start = -HH / 2
+        plate_y_end = HH / 2
+
+        if plate_x_start <= x <= plate_x_end and plate_y_start <= y <= plate_y_end:
+            if i % 2 == 0:  # orange plate
+                return V0
+            else:  # blue plate
+                return -V0
+
+    return 0.0  # Outside plates, return 0
 
 
 def q_func(x, y):
@@ -253,10 +289,39 @@ def gen_mesh():
     return netz
 
 
+def load_mt_mesh(mesh_file):
+    p, t, BouE, li_BE, bou_elem, CuE, li_CE = mt.LoadTriMesh(mesh_file, show=False)
+
+    # Robin Rand (Kreis Außen)
+    Ps_robin = [[Ra, 0.0], [Ra, 0.0]]
+    bseg_robin = mt.RetrieveSegments(p, BouE, li_BE, Ps_robin, ["Segments"])
+    robinRand = bseg_robin[0]
+
+    # Segmente für die Platten abrufen
+    Ps_dirichlet = []
+    typ_dirichlet = []
+    for k in range(num_platten):
+        Ps_dirichlet += [RO[k], RO[k]]
+        # Ps_dirichlet += [HolPoi[k], HolPoi[k]]
+        typ_dirichlet += ["Segments"]
+
+    bseg_dirichlet = mt.RetrieveSegments(p, BouE, li_BE, Ps_dirichlet, typ_dirichlet)
+
+    # Dictionary für das Netz-Objekt vorbereiten
+    mesh_dict = {"robinRand": robinRand, "plattenRand": [seg for sublist in bseg_dirichlet for seg in sublist]}
+
+    # Jede Platte einzeln abspeichern
+    for k in range(num_platten):
+        mesh_dict[f"plate_{k}"] = list(bseg_dirichlet[k])
+
+    netz = MshHs(None, p, t, mesh_dict)
+    return netz
+
+
 # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
 
 
-def a1():
+def aufg_a():
     netz = gen_mesh()
     netz.dim = 2
 
@@ -271,6 +336,282 @@ def a1():
     plt.axis("equal")
 
 
-if __name__ == "__main__":
-    a1()
+def aufg_b():
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+    HH = 10e-2  # 10cm -- höhe platte
+    hh = 5e-2  # 5cm -- höhe dielektrikums
+
+    def alpha_func(x, y):
+        # check if in dielektrikum region
+        for i in range(num_platten - 1):
+            dielek_x_start = -breite / 2 + (i * Dx * 2) + Dx
+            dielek_x_end = dielek_x_start + Dx
+            dielek_y_start = -HH / 2
+            dielek_y_end = dielek_y_start + hh
+
+            if dielek_x_start <= x <= dielek_x_end and dielek_y_start <= y <= dielek_y_end:
+                return EPSILON_0 * EPSILON_R
+
+        return EPSILON_0  # Outside dielektrikum, return e0
+
+    def beta_func(x, y):
+        return 0.0
+
+    def f_func(x, y):
+        return 0.0
+
+    def gamma_func(x, y):
+        zahler = EPSILON_0
+        nenner = np.sqrt(x**2 + y**2) * np.log(np.sqrt(x**2 + y**2))
+        return -zahler / nenner
+
+    def phi_func(x, y):
+        # check if platte is orange or blue
+        for i in range(num_platten):
+            plate_x_start = -breite / 2 + (i * Dx * 2)
+            plate_x_end = plate_x_start + Dx
+            plate_y_start = -HH / 2
+            plate_y_end = HH / 2
+
+            if plate_x_start <= x <= plate_x_end and plate_y_start <= y <= plate_y_end:
+                if i % 2 == 0:  # orange plate
+                    return V0
+                else:  # blue plate
+                    return -V0
+
+        return 0.0  # Outside plates, return 0
+
+    def q_func(x, y):
+        return 0.0
+
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+    def calc_epsilon_r(netz_obj, group_name, segment_indices):
+        epsilon_r = []
+
+        # Dynamischer Abruf der korrekten Platte (z.B. "plate_0")
+        seg = getattr(netz_obj, group_name).elements[segment_indices]
+
+        # Look up the actual coordinates of these nodes and calculate their midpoints
+        p1 = netz_obj.points[seg[:, 0]]
+        p2 = netz_obj.points[seg[:, 1]]
+        midpoints = (p1 + p2) / 2.0
+
+        # Pass scalar floats into alpha_func
+        for i in range(len(midpoints)):
+            x, y = midpoints[i, 0], midpoints[i, 1]
+            alpha = alpha_func(x, y)
+            epsilon_r.append(alpha / EPSILON_0)
+
+        return np.array(epsilon_r)
+
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+    netz = load_mt_mesh("mesh_WS1819.npz")
+
+    plist = np.asfortranarray(netz.points.astype(np.float64))
+    tlist = np.asfortranarray(netz.Triangle.elements.astype(np.int32))
+    rr = np.asfortranarray(netz.robinRand.elements.astype(np.int32).reshape(-1, 2))
+    dd = np.ascontiguousarray(netz.plattenRand.elements.astype(np.int32).flatten())
+
+    hhs = [0, HH / 4, HH / 2, 3 * HH / 4, HH]
+    kap_vals = []
+    hh = HH / 2
+    solver = fem_cpp.FEM_2D(
+        dd, rr, plist, tlist, alpha_func, alpha_func, beta_func, f_func, phi_func, gamma_func, q_func
+    )
+    solver.full_solve()
+    sol = solver.get_Solution()
+    plt.figure(figsize=(20, 10))
+
+    for k in range(num_platten):
+        group_name = f"plate_{k}"
+        rl, n_der, idx, _, _ = gm.NormalDerivative(group_name, netz, sol, "left")
+
+        eps_r = calc_epsilon_r(netz, group_name, idx)
+
+        ladungsdichte = -EPSILON_0 * eps_r * n_der
+
+        qq = integrate.simpson(ladungsdichte, x=rl)
+
+        plt.subplot(2, 2, k + 1)
+        plt.plot(rl, ladungsdichte, label=f"Plattennummer={k}")
+
+        plt.title(f"hh={hh} --> Gesamtladung {qq:.5e} C/m")
+
+        plt.xlabel("Länge / m")
+        plt.ylabel(r"Ladungsdichte = $\epsilon \frac{\partial \Phi}{\partial n}$ / $C/m^2$")
+        plt.legend()
+
+    plt.tight_layout()
     plt.show()
+
+    del solver
+    gc.collect()
+
+    for hh_val in hhs:
+        # global hh
+        hh = hh_val
+        print(f"\n--- Solving for Dielectric Height HH = {hh} ---")
+
+        solver = fem_cpp.FEM_2D(
+            dd, rr, plist, tlist, alpha_func, alpha_func, beta_func, f_func, phi_func, gamma_func, q_func
+        )
+        solver.full_solve()
+        sol = solver.get_Solution()
+
+        Q0 = 0.0
+        Q1 = 0.0
+
+        # Auswertung PRO PLATTE
+        for k in range(num_platten):
+            group_name = f"plate_{k}"
+            rl, n_der, idx, _, _ = gm.NormalDerivative(group_name, netz, sol, "left")
+
+            # Übergebe den korrekten Gruppennamen an den Helper!
+            eps_r = calc_epsilon_r(netz, group_name, idx)
+            ladungsdichte = -EPSILON_0 * eps_r * n_der
+
+            qq = integrate.simpson(ladungsdichte, x=rl)
+
+            if k % 2 == 0:
+                Q0 += qq
+            else:
+                Q1 += qq
+
+        C = 0.5 * (Q0 - Q1) / (2 * V0)
+        kap_vals.append(C)
+
+        print(f"Q0 (Positive Platten): {Q0:.5e} C")
+        print(f"Q1 (Negative Platten): {Q1:.5e} C")
+        print(f"Capacitance C:         {C:.5e} F")
+
+        del solver
+        gc.collect()
+
+    # ==============================================================
+    # PLOTTING
+    # ==============================================================
+
+    # Plot 2: Kapazität als Funktion der Höhe (laut Klausur Teil b, letzter Punkt)
+    plt.figure(figsize=(8, 6))
+    plt.plot(hhs, kap_vals, marker="o", linestyle="-", color="red", linewidth=2)
+    plt.title("Kapazität als Funktion der Füllstandshöhe hh")
+    plt.xlabel("Füllstandshöhe hh [m]")
+    plt.ylabel("Kapazität C [F]")
+
+    plt.show()
+
+
+def aufg_d():
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+    HH = 10e-2  # 10cm -- höhe platte
+    hh = HH/2  # 5cm -- höhe dielektrikums
+    # f0 = 250e3  # 250kHz
+
+    def alpha_func(x, y):
+        # check if in dielektrikum region
+        loc_sigma = SIGMA_0
+        loc_eps = EPSILON_0
+        for i in range(num_platten - 1):
+            dielek_x_start = -breite / 2 + (i * Dx * 2) + Dx
+            dielek_x_end = dielek_x_start + Dx
+            dielek_y_start = -HH / 2
+            dielek_y_end = dielek_y_start + hh
+
+            if dielek_x_start <= x <= dielek_x_end and dielek_y_start <= y <= dielek_y_end:
+                loc_sigma = SIGMA_0 * SIGMA
+                loc_eps = EPSILON_0 * EPSILON_R
+
+        return complex(loc_sigma, 2 * np.pi * f0 * loc_eps)
+
+    def beta_func(x, y):
+        return complex(0.0, 0.0)
+
+    def f_func(x, y):
+        return complex(0.0, 0.0)
+
+    def gamma_func(x, y):
+        zahler = EPSILON_0
+        nenner = np.sqrt(x**2 + y**2) * np.log(np.sqrt(x**2 + y**2))
+        return complex(-zahler / nenner, 0.0)
+
+    def phi_func(x, y):
+        # check if platte is orange or blue
+        for i in range(num_platten):
+            plate_x_start = -breite / 2 + (i * Dx * 2)
+            plate_x_end = plate_x_start + Dx
+            plate_y_start = -HH / 2
+            plate_y_end = HH / 2
+
+            if plate_x_start <= x <= plate_x_end and plate_y_start <= y <= plate_y_end:
+                if i % 2 == 0:  # orange plate
+                    return complex(V0, 0.0)
+                else:  # blue plate
+                    return complex(-V0, 0.0)
+
+        return complex(0.0, 0.0)  # Outside plates, return 0
+
+    def q_func(x, y):
+        return complex(0.0, 0.0)
+
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+    def calc_sigma(netz_obj, group_name, segment_indices):
+        sigma = []
+
+        # Dynamischer Abruf der korrekten Platte (z.B. "plate_0")
+        seg = getattr(netz_obj, group_name).elements[segment_indices]
+
+        # Look up the actual coordinates of these nodes and calculate their midpoints
+        p1 = netz_obj.points[seg[:, 0]]
+        p2 = netz_obj.points[seg[:, 1]]
+        midpoints = (p1 + p2) / 2.0
+
+        # Pass scalar floats into alpha_func
+        for i in range(len(midpoints)):
+            x, y = midpoints[i, 0], midpoints[i, 1]
+            alpha = alpha_func(x, y)
+            sigma.append(alpha / EPSILON_0)
+
+        return np.array(sigma)
+
+    # –-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----–-–----
+
+    netz = load_mt_mesh("mesh_WS1819.npz")
+
+    plist = np.asfortranarray(netz.points.astype(np.float64))
+    tlist = np.asfortranarray(netz.Triangle.elements.astype(np.int32))
+    rr = np.asfortranarray(netz.robinRand.elements.astype(np.int32).reshape(-1, 2))
+    dd = np.ascontiguousarray(netz.plattenRand.elements.astype(np.int32).flatten())
+
+    frequencies = np.logspace(1,8,15)
+
+    f0 = 10 # 10Hz
+
+    solver = fem_cpp.FEM_2D_complex(
+        dd, rr, plist, tlist, alpha_func, alpha_func, beta_func, f_func, phi_func, gamma_func, q_func
+    )
+    solver.full_solve()
+    sol = solver.get_Solution()
+
+    rl, n_der, idx, _, _ = gm.NormalDerivative("plattenRand", netz, sol, "left")
+
+    sigma = calc_sigma(netz, "plattenRand", idx)
+
+    ladungsdichte = sigma * n_der
+
+    qq = integrate.simpson(ladungsdichte, x=rl)
+
+    print(qq)
+    del solver
+    gc.collect()
+
+    plt.show()
+
+
+if __name__ == "__main__":
+    # aufg_a()
+    print("------------------------- Aufgabe b) -------------------------")
+    # aufg_b()
+    aufg_d()
