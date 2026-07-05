@@ -5,6 +5,7 @@
 #include <nanobind/stl/vector.h>   // std::vector <-> Python list
 #include <nanobind/stl/tuple.h>    // std::tuple <-> Python tuple
 #include <nanobind/stl/string.h>   // std::string <-> Python str
+#include <nanobind/stl/complex.h>  // std::complex <-> Python complex
 #include "FEM_1D.hpp"
 #include "FEM_2D.hpp"
 
