@@ -92,7 +92,7 @@ nanobind_add_stub(
   fem_cpp_stub 
   MODULE fem_cpp 
   OUTPUT fem_cpp.pyi
-  PYTHON_PATH "."
+  PYTHON_PATH "$<TARGET_FILE_DIR:fem_cpp>"
   DEPENDS fem_cpp
 )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fem_cpp.pyi DESTINATION .)
@@ -115,7 +115,7 @@ if (BUILD_MKL_TARGETS)
       fem_cpp_mkl_stub 
       MODULE fem_cpp_mkl 
       OUTPUT fem_cpp_mkl.pyi
-      PYTHON_PATH "."
+      PYTHON_PATH "$<TARGET_FILE_DIR:fem_cpp>"
       DEPENDS fem_cpp_mkl
     )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fem_cpp_mkl.pyi DESTINATION . OPTIONAL)
