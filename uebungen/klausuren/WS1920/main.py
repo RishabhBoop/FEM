@@ -8,8 +8,8 @@ import pandas as pd
 from numba import cfunc, float64, int32
 import gmsh
 
-# import fem_cpp
-import fem_cpp_mkl as fem_cpp
+import fem_cpp
+# import fem_cpp_mkl as fem_cpp
 
 from helper_funcs.colors import Colors as colors
 from helper_funcs.visualizations import visualize_solution, print_timings, visualize_error, print_error_stats
@@ -911,24 +911,24 @@ def f_aufgabe():
 
 
 if __name__ == "__main__":
-    # a()
+    a()
 
-    # L_1, M = b()
-    # L_2, M_ = c()
-    # L_1 = abs(L_1)
-    # M = abs(M)
-    # L_2 = abs(L_2)
-    # M_ = abs(M_)
-    # print("–---------------------- b und c -----------------------")
-    # print(f"L1: {L_1:.6e} H")
-    # print(f"M: {M:.6e} H")
-    # print(f"L2: {L_2:.6e} H")
-    # print(f"M': {M_:.6e} H")
-    # k = M / np.sqrt(L_1 * L_2)
-    # print(f"Kopplungsfaktor k: {k:.6f}")
-    # # print("–---------------------------------------------------")
-    # d()
-    # e()
+    L_1, M = b()
+    L_2, M_ = c()
+    L_1 = abs(L_1)
+    M = abs(M)
+    L_2 = abs(L_2)
+    M_ = abs(M_)
+    print("–---------------------- b und c -----------------------")
+    print(f"L1: {L_1:.6e} H")
+    print(f"M: {M:.6e} H")
+    print(f"L2: {L_2:.6e} H")
+    print(f"M': {M_:.6e} H")
+    k = M / np.sqrt(L_1 * L_2)
+    print(f"Kopplungsfaktor k: {k:.6f}")
+    # print("–---------------------------------------------------")
+    d()
+    e() 
     f_aufgabe()
-    # plt.axis("equal")
+    plt.axis("equal")
     plt.show()

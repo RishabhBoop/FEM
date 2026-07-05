@@ -16,6 +16,7 @@
 #include <algorithm> // std::sort, std::stable_sort
 #include <tuple>
 #include <cmath>
+#include <complex>
 
 typedef Eigen::VectorXd Vector;
 typedef Eigen::VectorXi VectorINT;
@@ -26,6 +27,7 @@ typedef Eigen::SparseMatrix<double> SparseMatrix;
 
 using namespace std;
 
+template <typename Scalar>
 class FEM_2D
 {
 private:
@@ -37,20 +39,20 @@ private:
     Matrix plist;
     MatrixINT tlist;
 
-    Eigen::SparseMatrix<double> K;
-    Eigen::VectorXd D;
+    Eigen::SparseMatrix<Scalar> K;
+    Eigen::Vector<Scalar, Eigen::Dynamic> D;
 
-    Eigen::VectorXd Sol_noRW;
-    Eigen::VectorXd Sol;
+    Eigen::Vector<Scalar, Eigen::Dynamic> Sol_noRW;
+    Eigen::Vector<Scalar, Eigen::Dynamic> Sol;
 
-    function<double(double, double)> alpha1;
-    function<double(double, double)> alpha2;
-    function<double(double, double)> beta;
-    function<double(double, double)> f;
+    function<Scalar(double, double)> alpha1;
+    function<Scalar(double, double)> alpha2;
+    function<Scalar(double, double)> beta;
+    function<Scalar(double, double)> f;
 
-    function<double(double, double)> phi;
-    function<double(double, double)> gamma;
-    function<double(double, double)> q;
+    function<Scalar(double, double)> phi;
+    function<Scalar(double, double)> gamma;
+    function<Scalar(double, double)> q;
 
     vector<bool> is_dirichlet;
 
@@ -62,21 +64,21 @@ public:
         MatrixINT rr,
         Matrix plist,
         MatrixINT tlist,
-        function<double(double, double)> alpha1,
-        function<double(double, double)> alpha2,
-        function<double(double, double)> beta,
-        function<double(double, double)> f,
-        function<double(double, double)> phi,
-        function<double(double, double)> gamma,
-        function<double(double, double)> q);
+        function<Scalar(double, double)> alpha1,
+        function<Scalar(double, double)> alpha2,
+        function<Scalar(double, double)> beta,
+        function<Scalar(double, double)> f,
+        function<Scalar(double, double)> phi,
+        function<Scalar(double, double)> gamma,
+        function<Scalar(double, double)> q);
 
     Vector gen_b(const Vector &) const;
     Vector gen_c(const Vector &) const;
     double gen_delta_E(int, int, int) const;
 
-    tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> gen_local_matrices();
+    tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>> gen_local_matrices();
 
-    void assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12, Vector &K13, Vector &K23, Vector &D1);
+    void assemble_matrix(Eigen::Vector<Scalar, Eigen::Dynamic> &K11, Eigen::Vector<Scalar, Eigen::Dynamic> &K22, Eigen::Vector<Scalar, Eigen::Dynamic> &K33, Eigen::Vector<Scalar, Eigen::Dynamic> &K12, Eigen::Vector<Scalar, Eigen::Dynamic> &K13, Eigen::Vector<Scalar, Eigen::Dynamic> &K23, Eigen::Vector<Scalar, Eigen::Dynamic> &D1);
 
     void solve_LGS();
 
@@ -92,14 +94,11 @@ public:
     vector<int> get_Randelemente() { return Randelemente; };
     Matrix get_plist() { return plist; };
     MatrixINT get_tlist() { return tlist; };
-    Eigen::SparseMatrix<double> get_K() { return K; };
-    Eigen::VectorXd get_D() { return D; };
-    Eigen::VectorXd get_Sol_noRW() { return Sol_noRW; };
-    Eigen::VectorXd get_Sol() { return Sol; };
+    Eigen::SparseMatrix<Scalar> get_K() { return K; };
+    Eigen::Vector<Scalar, Eigen::Dynamic> get_D() { return D; };
+    Eigen::Vector<Scalar, Eigen::Dynamic> get_Sol_noRW() { return Sol_noRW; };
+    Eigen::Vector<Scalar, Eigen::Dynamic> get_Sol() { return Sol; };
 
-    tuple<Vector, vector<double>> validate_sol(Vector, double);
-
+    tuple<Vector, vector<double>> validate_sol(Eigen::Vector<Scalar, Eigen::Dynamic> sol_tst, double max_error);
     ~FEM_2D() = default;
 };
-
-vector<int> gen_Randelemente(Vector, Vector, double);

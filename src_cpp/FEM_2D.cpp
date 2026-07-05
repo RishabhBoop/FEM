@@ -1,19 +1,19 @@
 #include "FEM_2D.hpp"
 
 using namespace std;
-
-FEM_2D::FEM_2D(
+template <typename Scalar>
+FEM_2D<Scalar>::FEM_2D(
     VectorINT dr,
     MatrixINT rr,
     Matrix plist,
     MatrixINT tlist,
-    function<double(double, double)> alpha1,
-    function<double(double, double)> alpha2,
-    function<double(double, double)> beta,
-    function<double(double, double)> f,
-    function<double(double, double)> phi,
-    function<double(double, double)> gamma,
-    function<double(double, double)> q) : dr(dr),
+    function<Scalar(double, double)> alpha1,
+    function<Scalar(double, double)> alpha2,
+    function<Scalar(double, double)> beta,
+    function<Scalar(double, double)> f,
+    function<Scalar(double, double)> phi,
+    function<Scalar(double, double)> gamma,
+    function<Scalar(double, double)> q) : dr(dr),
                                           rr(rr),
                                           plist(plist),
                                           tlist(tlist),
@@ -34,7 +34,8 @@ FEM_2D::FEM_2D(
     }
 }
 
-Vector FEM_2D::gen_b(const Vector &y) const
+template <typename Scalar>
+Vector FEM_2D<Scalar>::gen_b(const Vector &y) const
 {
     // y = [y1, y2, y3] - y-coords of 3 nodes of one triangle
     Vector result(3);
@@ -44,7 +45,8 @@ Vector FEM_2D::gen_b(const Vector &y) const
     return result;           // Vector of size 3
 }
 
-Vector FEM_2D::gen_c(const Vector &x) const
+template <typename Scalar>
+Vector FEM_2D<Scalar>::gen_c(const Vector &x) const
 {
     // x = [x1, x2, x3] - x-coords of 3 nodes of one triangle
     Vector result(3);
@@ -54,7 +56,8 @@ Vector FEM_2D::gen_c(const Vector &x) const
     return result;           // Vector of size 3
 }
 
-double FEM_2D::gen_delta_E(int p0, int p1, int p2) const
+template <typename Scalar>
+double FEM_2D<Scalar>::gen_delta_E(int p0, int p1, int p2) const
 {
     double deltaE;
 
@@ -70,20 +73,19 @@ double FEM_2D::gen_delta_E(int p0, int p1, int p2) const
     return deltaE / 2.0;
 }
 
-tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_matrices()
+template <typename Scalar>
+tuple<Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>, Eigen::Vector<Scalar, Eigen::Dynamic>> FEM_2D<Scalar>::gen_local_matrices()
 {
     Vector y_coords(3); // Shape: (3) - y(0, 1, 2)
     Vector x_coords(3); // Shape: (3) - x(0, 1, 2)
 
-    Vector K11(tlist.rows()); // Shape: (N_elements) - K11 for each triangle
-    Vector K22(tlist.rows()); // Shape: (N_elements) - K22 for each triangle
-    Vector K33(tlist.rows()); // Shape: (N_elements) - K33 for each triangle
-
-    Vector K12(tlist.rows()); // Shape: (N_elements) - K12 for each triangle
-    Vector K13(tlist.rows()); // Shape: (N_elements) - K13 for each triangle
-    Vector K23(tlist.rows()); // Shape: (N_elements) - K23 for each triangle
-
-    Vector D1(tlist.rows()); // Shape: (N_elements) - D1 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K11(tlist.rows()); // Shape: (N_elements) - K11 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K22(tlist.rows()); // Shape: (N_elements) - K22 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K33(tlist.rows()); // Shape: (N_elements) - K33 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K12(tlist.rows()); // Shape: (N_elements) - K12 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K13(tlist.rows()); // Shape: (N_elements) - K13 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> K23(tlist.rows()); // Shape: (N_elements) - K23 for each triangle
+    Eigen::Vector<Scalar, Eigen::Dynamic> D1(tlist.rows());  // Shape: (N_elements) - D1 for each triangle
 
     for (int i = 0; i < tlist.rows(); ++i)
     {
@@ -102,31 +104,31 @@ tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_
         double xm = (x_coords(0) + x_coords(1) + x_coords(2)) / 3.0; // centroid x
         double ym = (y_coords(0) + y_coords(1) + y_coords(2)) / 3.0; // centroid y
 
-        double alpha1m = alpha1(xm, ym);
-        double alpha2m = alpha2(xm, ym);
-        double betam = beta(xm, ym);
-        double fm = f(xm, ym);
+        Scalar alpha1m = alpha1(xm, ym);
+        Scalar alpha2m = alpha2(xm, ym);
+        Scalar betam = beta(xm, ym);
+        Scalar fm = f(xm, ym);
 
         double deltaE = gen_delta_E(tlist(i, 0), tlist(i, 1), tlist(i, 2));
 
-        K11(i) = (alpha1m / (4 * deltaE)) * bj(0) * bj(0) +
-                 (alpha2m / (4 * deltaE)) * cj(0) * cj(0) +
-                 (betam * 2 * deltaE / 12.0);
-        K22(i) = (alpha1m / (4 * deltaE)) * bj(1) * bj(1) +
-                 (alpha2m / (4 * deltaE)) * cj(1) * cj(1) +
-                 (betam * 2 * deltaE / 12.0);
-        K33(i) = (alpha1m / (4 * deltaE)) * bj(2) * bj(2) +
-                 (alpha2m / (4 * deltaE)) * cj(2) * cj(2) +
-                 (betam * 2 * deltaE / 12.0);
+        K11(i) = (alpha1m / (4.0 * deltaE)) * bj(0) * bj(0) +
+                 (alpha2m / (4.0 * deltaE)) * cj(0) * cj(0) +
+                 (betam * 2.0 * deltaE / 12.0);
+        K22(i) = (alpha1m / (4.0 * deltaE)) * bj(1) * bj(1) +
+                 (alpha2m / (4.0 * deltaE)) * cj(1) * cj(1) +
+                 (betam * 2.0 * deltaE / 12.0);
+        K33(i) = (alpha1m / (4.0 * deltaE)) * bj(2) * bj(2) +
+                 (alpha2m / (4.0 * deltaE)) * cj(2) * cj(2) +
+                 (betam * 2.0 * deltaE / 12.0);
 
-        K12(i) = (alpha1m / (4 * deltaE)) * bj(0) * bj(1) +
-                 (alpha2m / (4 * deltaE)) * cj(0) * cj(1) +
+        K12(i) = (alpha1m / (4.0 * deltaE)) * bj(0) * bj(1) +
+                 (alpha2m / (4.0 * deltaE)) * cj(0) * cj(1) +
                  (betam * deltaE / 12.0);
-        K13(i) = (alpha1m / (4 * deltaE)) * bj(0) * bj(2) +
-                 (alpha2m / (4 * deltaE)) * cj(0) * cj(2) +
+        K13(i) = (alpha1m / (4.0 * deltaE)) * bj(0) * bj(2) +
+                 (alpha2m / (4.0 * deltaE)) * cj(0) * cj(2) +
                  (betam * deltaE / 12.0);
-        K23(i) = (alpha1m / (4 * deltaE)) * bj(1) * bj(2) +
-                 (alpha2m / (4 * deltaE)) * cj(1) * cj(2) +
+        K23(i) = (alpha1m / (4.0 * deltaE)) * bj(1) * bj(2) +
+                 (alpha2m / (4.0 * deltaE)) * cj(1) * cj(2) +
                  (betam * deltaE / 12.0);
 
         D1(i) = (fm * deltaE / 3.0);
@@ -134,7 +136,14 @@ tuple<Vector, Vector, Vector, Vector, Vector, Vector, Vector> FEM_2D::gen_local_
     return {K11, K22, K33, K12, K13, K23, D1};
 }
 
-void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12, Vector &K13, Vector &K23, Vector &D1)
+template <typename Scalar>
+void FEM_2D<Scalar>::assemble_matrix(Eigen::Vector<Scalar, Eigen::Dynamic> &K11,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K22,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K33,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K12,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K13,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &K23,
+                                     Eigen::Vector<Scalar, Eigen::Dynamic> &D1)
 {
     vector<int> node_to_matrix(plist.rows(), -1); // list of size plist, initialized to -1 (indicating Randwert nodes); holds mapping from global node index to matrix index
     int free_count = 0;                           // count of free nodes (unknowns); This will be the size of the matrix and D vector after assembly
@@ -145,8 +154,8 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
             node_to_matrix[i] = free_count++; // assign matrix index and increment free count
     }
 
-    D = Vector::Zero(free_count);            // Initialize D vector with correct size and zeroes
-    vector<Eigen::Triplet<double>> triplets; // {row, col, value} for sparse matrix assembly
+    D = Eigen::Vector<Scalar, Eigen::Dynamic>::Zero(free_count); // Initialize D vector with correct size and zeroes
+    vector<Eigen::Triplet<Scalar>> triplets;                     // {row, col, value} for sparse matrix assembly
 
     for (int i = 0; i < tlist.rows(); ++i)
     {
@@ -167,7 +176,7 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
                     if (matrix_col != -1)                        // If the column node is also a free node, add to K
                     {
                         // Now we know for sure that this entry contributes to K and is not a dirichlet node.
-                        double value = 0.0;
+                        Scalar value = 0.0;
                         if (r == c)
                         {
                             if (r == 0)
@@ -188,8 +197,8 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
                     }
                     else // If the column node is a Dirichlet node, move contribution to D
                     {
-                        double phi_value = phi(plist(global_col, 0), plist(global_col, 1)); // Dirichlet value at this node
-                        double value = 0.0;
+                        Scalar phi_value = phi(plist(global_col, 0), plist(global_col, 1)); // Dirichlet value at this node
+                        Scalar value = 0.0;
                         if (r == c)
                         {
                             if (r == 0)
@@ -223,19 +232,15 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
         if (m0 == -1 && m1 == -1)
             continue;
 
-        pair<double, double> p0 = {plist(rr(i, 0), 0), plist(rr(i, 0), 1)};
-        pair<double, double> p1 = {plist(rr(i, 1), 0), plist(rr(i, 1), 1)};
+        double mid_x = (plist(rr(i, 0), 0) + plist(rr(i, 1), 0)) / 2.0;
+        double mid_y = (plist(rr(i, 0), 1) + plist(rr(i, 1), 1)) / 2.0;
+        double edge_length = sqrt(pow(plist(rr(i, 1), 0) - plist(rr(i, 0), 0), 2) + pow(plist(rr(i, 1), 1) - plist(rr(i, 0), 1), 2));
+        Scalar gamma_val = gamma(mid_x, mid_y);
+        Scalar q_val = q(mid_x, mid_y);
 
-        double mid_x = (p0.first + p1.first) / 2.0;
-        double mid_y = (p0.second + p1.second) / 2.0;
-        double edge_length = sqrt(pow(p1.first - p0.first, 2) + pow(p1.second - p0.second, 2));
-
-        double gamma_val = gamma(mid_x, mid_y);
-        double q_val = q(mid_x, mid_y);
-
-        double gamma_val_11 = gamma_val * edge_length / 3.0;
-        double gamma_val_12 = gamma_val * edge_length / 6.0;
-        double q_val_contribution = q_val * edge_length / 2.0;
+        Scalar gamma_val_11 = gamma_val * edge_length / 3.0;
+        Scalar gamma_val_12 = gamma_val * edge_length / 6.0;
+        Scalar q_val_contribution = q_val * edge_length / 2.0;
 
         // Node 0 contributions
         if (m0 != -1)
@@ -249,7 +254,7 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
             else
             {
                 // m1 is Dirichlet, move its contribution to D
-                double phi_value = phi(plist(rr(i, 1), 0), plist(rr(i, 1), 1));
+                Scalar phi_value = phi(plist(rr(i, 1), 0), plist(rr(i, 1), 1));
                 D(m0) -= gamma_val_12 * phi_value;
             }
         }
@@ -266,7 +271,7 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
             else
             {
                 // m0 is Dirichlet, move its contribution to D
-                double phi_value = phi(plist(rr(i, 0), 0), plist(rr(i, 0), 1));
+                Scalar phi_value = phi(plist(rr(i, 0), 0), plist(rr(i, 0), 1));
                 D(m1) -= gamma_val_12 * phi_value;
             }
         }
@@ -276,13 +281,14 @@ void FEM_2D::assemble_matrix(Vector &K11, Vector &K22, Vector &K33, Vector &K12,
     K.setFromTriplets(triplets.begin(), triplets.end());
 }
 
-void FEM_2D::solve_LGS()
+template <typename Scalar>
+void FEM_2D<Scalar>::solve_LGS()
 {
 // Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
 #ifdef USE_MKL
-    Eigen::PardisoLU<SparseMatrix> solver;
+    Eigen::PardisoLU<Eigen::SparseMatrix<Scalar>> solver;
 #else
-    Eigen::SparseLU<SparseMatrix> solver;
+    Eigen::SparseLU<Eigen::SparseMatrix<Scalar>> solver;
 #endif
 
     solver.compute(K);
@@ -304,7 +310,8 @@ void FEM_2D::solve_LGS()
     }
 }
 
-void FEM_2D::reconstruct_solution()
+template <typename Scalar>
+void FEM_2D<Scalar>::reconstruct_solution()
 {
     Sol.resize(plist.rows());
 
@@ -322,7 +329,8 @@ void FEM_2D::reconstruct_solution()
     }
 }
 
-void FEM_2D::print_solution()
+template <typename Scalar>
+void FEM_2D<Scalar>::print_solution()
 {
     // Just print the solution vector
     cout << "Solution at nodes:" << endl;
@@ -334,7 +342,8 @@ void FEM_2D::print_solution()
     cout << ")" << endl;
 }
 
-vector<tuple<string, double>> FEM_2D::full_solve()
+template <typename Scalar>
+vector<tuple<string, double>> FEM_2D<Scalar>::full_solve()
 {
     auto t1 = chrono::high_resolution_clock::now();
 
@@ -366,7 +375,8 @@ vector<tuple<string, double>> FEM_2D::full_solve()
     return timings;
 }
 
-tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_error)
+template <typename Scalar>
+tuple<Vector, vector<double>> FEM_2D<Scalar>::validate_sol(Eigen::Vector<Scalar, Eigen::Dynamic> sol_tst, double max_error)
 {
     if (Sol.size() != sol_tst.size())
     {
@@ -374,16 +384,20 @@ tuple<Vector, vector<double>> FEM_2D::validate_sol(Vector sol_tst, double max_er
         throw runtime_error(error_msg);
     }
 
-    Vector error = Sol - sol_tst;
-    error = error.cwiseAbs(); // take absolute value of errors
-    double max_abs_error = error.maxCoeff();
-    double min_abs_error = error.minCoeff();
-    double mean_abs_error = error.mean();
+    // Eigen::Vector<Scalar, Eigen::Dynamic> error = Sol - sol_tst;
+    // error = error.cwiseAbs(); // take absolute value of errors
+    Vector error_abs = (Sol - sol_tst).cwiseAbs();
+    double max_abs_error = error_abs.maxCoeff();
+    double min_abs_error = error_abs.minCoeff();
+    double mean_abs_error = error_abs.mean();
 
     // string suc = format("=> [PASS] Max error is within {:.2e} of actual solution", max_error);
     // string fail = format("=> [FAIL] Max error exceeds threshold of {:.2e} of actual solution", max_error);
 
     vector<double> error_stats = {max_abs_error, min_abs_error, mean_abs_error};
 
-    return {error, error_stats};
+    return {error_abs, error_stats};
 }
+
+template class FEM_2D<double>;
+template class FEM_2D<std::complex<double>>;

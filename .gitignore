@@ -21,3 +21,5 @@ uebungen/klausuren/WS1920/LoesungWS1920
 uebungen/klausuren/WS1920/Loesung_FEM_WS1920
 *.msh
 uebungen/klausuren/WS1920/Klausur_WS1920_netz.npz
+uebungen/TestGroups.brep
+uebungen/klausuren/WS1920/to_momo_sol_noRW.dat

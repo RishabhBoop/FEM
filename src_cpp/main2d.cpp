@@ -60,7 +60,7 @@ int main()
     printf("]\n");
     
 
-    FEM_2D TST(
+    FEM_2D<double> TST(
         dr,
         rr,
         plist,

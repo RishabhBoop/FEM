@@ -1,7 +1,7 @@
 import sys
 sys.path.append(r"C:/Users/weju0001/Data/Python/MESH")
 import numpy as np
-import meshtools as mt
+import helper_funcs.meshtools as mt
 import matplotlib.pyplot as plt
 
 
@@ -70,11 +70,11 @@ def myrefine(tri_points, area):
   return bool(area>max_area)
 
 # Netz wird generiert
-poi,tri,BouE,li_BE,bou_elem,CuE,li_CE=mt.DoTriMesh(p,v,edge_length=length,tri_refine=myrefine,holes=HolPoi)
+poi,tri,BouE,li_BE,bou_elem,CuE,li_CE=mt.DoTriMesh(p,v,edge_length=length,tri_refine=myrefine,holes=HolPoi, writeTo="mesh_WS1819.npz")
 
 print("Anzahl der Punkte:           ",len(poi))
 print("Anzahl der Dreieckselemente: ",len(tri))
-plt.show()
+# plt.show()
 
 
 # Randkurven
@@ -88,10 +88,11 @@ bseg=mt.RetrieveSegments(poi,BouE,li_BE,Ps,typ)
 # Boundary-Plot
 for k in range(0,NL+1):
   mt.PlotBoundary(poi,bseg[k],typ[k])
-plt.show()
+# plt.show()
  
 # Robin-Rand 
 R0=bseg[0]
+
 #Dirichlet-Rand
 G0=[]
 for k in range(1,NL+1):
